@@ -1,0 +1,84 @@
+.container {
+  padding: 2rem 1rem;
+  min-height: 100vh;
+}
+
+.title {
+  text-align: center;
+  margin-bottom: 0.5rem;
+  color: var(--accent-11);
+  font-size: 2.2rem;
+}
+
+.subtitle {
+  display: block;
+  text-align: center;
+  margin-bottom: 2rem;
+  color: var(--gray-11);
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.loading,
+.error,
+.noMission {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+  text-align: center;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 3rem 2rem;
+  background: var(--accent-2);
+  border-radius: 16px;
+  border: 2px dashed var(--accent-6);
+  max-width: 400px;
+}
+
+.archiveButton {
+  margin-top: 1rem;
+}
+
+.actions {
+  margin-top: 2rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.submitButton {
+  font-size: 1.1rem;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+}
+
+@media (max-width: 640px) {
+  .container {
+    padding: 1rem;
+  }
+
+  .title {
+    font-size: 1.6rem;
+  }
+
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .actions a {
+    width: 100%;
+  }
+
+  .actions a button {
+    width: 100%;
+  }
+}
+

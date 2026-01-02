@@ -1,0 +1,143 @@
+/* Les missions de Tonton Toto - Global Styles */
+
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap');
+
+:root {
+  /* Custom CSS variables for kid-friendly theme */
+  --font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* Fun background pattern */
+  --bg-pattern: radial-gradient(circle at 20% 80%, rgba(0, 188, 212, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 152, 0, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(156, 39, 176, 0.05) 0%, transparent 70%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: var(--font-family);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg-pattern), linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+  background-attachment: fixed;
+}
+
+/* Override Radix themes font */
+.radix-themes {
+  --default-font-family: var(--font-family);
+}
+
+/* Links */
+a {
+  color: var(--accent-11);
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+a:hover {
+  opacity: 0.8;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--gray-3);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--accent-6);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-7);
+}
+
+/* Fun animations */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Apply animation to cards */
+.rt-Card {
+  animation: slideIn 0.3s ease-out;
+}
+
+/* Button hover effect */
+.rt-Button {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.rt-Button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.rt-Button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* Badge pulse effect for pending items */
+.rt-Badge[data-accent-color="orange"] {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* Responsive typography */
+@media (max-width: 640px) {
+  html {
+    font-size: 14px;
+  }
+}
+
+/* Focus states for accessibility */
+*:focus-visible {
+  outline: 2px solid var(--accent-9);
+  outline-offset: 2px;
+}
+
+/* Print styles */
+@media print {
+  body {
+    background: white;
+  }
+
+  .rt-Button {
+    display: none;
+  }
+}
+

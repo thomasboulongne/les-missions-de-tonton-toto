@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00bcd4"/>
+      <stop offset="100%" style="stop-color:#0097a7"/>
+    </linearGradient>
+  </defs>
+  <!-- Body -->
+  <rect x="25" y="35" width="50" height="45" rx="8" fill="url(#bodyGrad)"/>
+  <!-- Head -->
+  <rect x="30" y="15" width="40" height="25" rx="6" fill="url(#bodyGrad)"/>
+  <!-- Antenna -->
+  <line x1="50" y1="15" x2="50" y2="5" stroke="#ff9800" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="50" cy="5" r="4" fill="#ff9800"/>
+  <!-- Eyes -->
+  <circle cx="40" cy="27" r="5" fill="white"/>
+  <circle cx="60" cy="27" r="5" fill="white"/>
+  <circle cx="41" cy="28" r="2" fill="#333"/>
+  <circle cx="61" cy="28" r="2" fill="#333"/>
+  <!-- Mouth -->
+  <rect x="40" y="33" width="20" height="3" rx="1.5" fill="#333"/>
+  <!-- Arms -->
+  <rect x="15" y="40" width="10" height="25" rx="4" fill="url(#bodyGrad)"/>
+  <rect x="75" y="40" width="10" height="25" rx="4" fill="url(#bodyGrad)"/>
+  <!-- Wheels -->
+  <circle cx="35" cy="85" r="8" fill="#333"/>
+  <circle cx="65" cy="85" r="8" fill="#333"/>
+  <circle cx="35" cy="85" r="4" fill="#666"/>
+  <circle cx="65" cy="85" r="4" fill="#666"/>
+  <!-- Chest detail -->
+  <rect x="40" y="45" width="20" height="15" rx="2" fill="#ff9800"/>
+  <rect x="43" y="48" width="14" height="9" rx="1" fill="#333"/>
+</svg>

@@ -1,0 +1,2 @@
+export { DifficultyBadge } from './DifficultyBadge';
+

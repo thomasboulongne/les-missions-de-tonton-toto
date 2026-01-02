@@ -1,0 +1,39 @@
+.container {
+  margin-top: 2rem;
+}
+
+.title {
+  margin-bottom: 1rem;
+  color: var(--accent-11);
+}
+
+.hintCard {
+  margin-bottom: 1rem;
+  padding: 1.25rem;
+  background: var(--color-panel-solid);
+  border: 2px dashed var(--accent-6);
+}
+
+.hintLabel {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--accent-11);
+}
+
+.hintText {
+  display: block;
+  font-size: 1.05rem;
+  line-height: 1.6;
+}
+
+.revealButton {
+  width: 100%;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.revealButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+

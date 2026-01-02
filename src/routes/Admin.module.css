@@ -1,0 +1,120 @@
+.container {
+  padding: 2rem 1rem;
+  min-height: 100vh;
+}
+
+.backLink {
+  display: inline-block;
+  margin-bottom: 1.5rem;
+  color: var(--accent-11);
+  text-decoration: none;
+  font-weight: 500;
+  transition: opacity 0.2s;
+}
+
+.backLink:hover {
+  opacity: 0.8;
+}
+
+.title {
+  margin-bottom: 1.5rem;
+  color: var(--accent-11);
+}
+
+.tabsList {
+  margin-bottom: 1rem;
+}
+
+.tabTrigger {
+  font-size: 1rem;
+  padding: 0.75rem 1.25rem;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 3rem;
+  background: var(--gray-2);
+  border-radius: 12px;
+}
+
+.missionsList,
+.submissionsList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.missionCard {
+  border: 1px solid var(--gray-6);
+}
+
+.missionTitle {
+  color: var(--accent-11);
+  margin-bottom: 0.5rem;
+}
+
+.submissionCard {
+  border: 2px solid var(--gray-6);
+}
+
+.submissionCard.pending {
+  border-color: var(--orange-6);
+  background: var(--orange-2);
+}
+
+.submissionCard.reviewed {
+  border-color: var(--green-6);
+  background: var(--green-2);
+}
+
+.submissionTitle {
+  color: var(--accent-11);
+}
+
+.submissionContent {
+  padding: 1rem;
+  background: var(--color-panel-solid);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.submissionText {
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.mediaPreview {
+  max-width: 300px;
+  max-height: 200px;
+  object-fit: contain;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+}
+
+.reviewSection {
+  padding-top: 1rem;
+  border-top: 1px solid var(--gray-6);
+}
+
+.label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--gray-12);
+}
+
+.reviewTextarea {
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+
+@media (max-width: 640px) {
+  .container {
+    padding: 1rem;
+  }
+
+  .tabTrigger {
+    font-size: 0.9rem;
+    padding: 0.5rem 0.75rem;
+  }
+}
+

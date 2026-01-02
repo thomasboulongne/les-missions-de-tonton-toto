@@ -1,0 +1,130 @@
+.container {
+  padding: 2rem 1rem;
+  min-height: 100vh;
+}
+
+.backLink {
+  display: inline-block;
+  margin-bottom: 1.5rem;
+  color: var(--accent-11);
+  text-decoration: none;
+  font-weight: 500;
+  transition: opacity 0.2s;
+}
+
+.backLink:hover {
+  opacity: 0.8;
+}
+
+.title {
+  text-align: center;
+  margin-bottom: 0.5rem;
+  color: var(--accent-11);
+}
+
+.subtitle {
+  display: block;
+  text-align: center;
+  margin-bottom: 2rem;
+  color: var(--gray-11);
+}
+
+.loading,
+.error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 3rem;
+  background: var(--gray-2);
+  border-radius: 12px;
+}
+
+.missionsList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.missionItem {
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  border: 2px solid var(--gray-6);
+}
+
+.missionItem:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.missionItem.completed {
+  border-color: var(--green-6);
+  background: var(--green-2);
+}
+
+.missionInfo {
+  flex: 1;
+}
+
+.missionTitle {
+  color: var(--accent-11);
+  margin-bottom: 0.25rem;
+}
+
+.missionDate {
+  font-size: 0.85rem;
+}
+
+.expandHint {
+  display: block;
+  text-align: center;
+  margin-top: 1rem;
+  opacity: 0.7;
+}
+
+.expandedContent {
+  margin-top: 1rem;
+}
+
+.submissionsSection {
+  margin-top: 1.5rem;
+}
+
+.submissionsTitle {
+  color: var(--accent-11);
+  margin-bottom: 1rem;
+}
+
+.submissionCard {
+  margin-bottom: 1rem;
+  background: var(--color-panel-solid);
+  border: 1px solid var(--gray-6);
+}
+
+.submissionText {
+  margin-bottom: 0.5rem;
+  line-height: 1.6;
+}
+
+.mediaPreview {
+  margin-top: 0.5rem;
+}
+
+.reviewNotes {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: var(--accent-2);
+  border-radius: 6px;
+  border-left: 3px solid var(--accent-6);
+}
+
+@media (max-width: 640px) {
+  .container {
+    padding: 1rem;
+  }
+}
+
