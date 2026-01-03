@@ -1,6 +1,6 @@
-import styles from "./Heading.module.css";
-import { gsap } from "gsap";
 import { useEffect, useRef } from "react";
+import styles from "./Heading.module.css";
+import { useAnimationStore } from "../../stores/animationStore";
 
 const title = "Tonton";
 
@@ -9,6 +9,8 @@ export function Heading({ className }: { className?: string }) {
   const headingBottomLineRef = useRef<Array<HTMLSpanElement | null>>(
     Array.from(title).map(() => null)
   );
+  const register = useAnimationStore((state) => state.register);
+  const unregister = useAnimationStore((state) => state.unregister);
 
   useEffect(() => {
     if (
@@ -18,41 +20,19 @@ export function Heading({ className }: { className?: string }) {
     )
       return;
 
-    const ctx = gsap.context(() => {
-      const tl = gsap.timeline();
-      tl.fromTo(
-        headingTopLineRef.current,
-        {
-          y: 100,
-          opacity: 0,
-        },
-        {
-          y: 0,
-          opacity: 1,
-          duration: 1,
-          ease: "power2.inOut",
-        }
-      );
-      tl.fromTo(
-        headingBottomLineRef.current,
-        {
-          opacity: 1,
-          scale: 0,
-        },
-        {
-          scale: 1,
-          duration: 1,
-          opacity: 1,
-          ease: "elastic.out",
-          stagger: 0.1,
-        }
-      );
-    }, headingBottomLineRef.current);
+    const bottomLineChars = headingBottomLineRef.current.filter(
+      (node): node is HTMLSpanElement => node !== null
+    );
+
+    register("heading", {
+      topLine: headingTopLineRef.current,
+      bottomLineChars,
+    });
 
     return () => {
-      ctx.revert();
+      unregister("heading");
     };
-  }, []);
+  }, [register, unregister]);
 
   return (
     <h1 className={`${styles.heading} ${className}`}>

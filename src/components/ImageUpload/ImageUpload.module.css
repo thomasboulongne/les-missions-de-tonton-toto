@@ -1,0 +1,96 @@
+.label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--gray-12);
+}
+
+.dropZone {
+  border: 2px dashed var(--gray-6);
+  border-radius: 12px;
+  padding: 2rem 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: var(--gray-2);
+}
+
+.dropZone:hover {
+  border-color: var(--accent-8);
+  background: var(--accent-2);
+}
+
+.dragging {
+  border-color: var(--accent-9);
+  background: var(--accent-3);
+  transform: scale(1.01);
+}
+
+.uploading {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.icon {
+  font-size: 2rem;
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.error {
+  display: block;
+  margin-top: 0.5rem;
+}
+
+.previewContainer {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--gray-3);
+}
+
+.preview {
+  display: block;
+  width: 100%;
+  max-height: 200px;
+  object-fit: contain;
+  background: var(--gray-2);
+}
+
+.previewOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.previewContainer:hover .previewOverlay {
+  opacity: 1;
+}
+
+.uploadingText {
+  color: white;
+  font-weight: 500;
+}
+
+.changeButton,
+.removeButton {
+  backdrop-filter: blur(4px);
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--gray-6);
+  border-top-color: var(--accent-9);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+

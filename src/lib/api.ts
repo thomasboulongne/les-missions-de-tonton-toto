@@ -90,6 +90,31 @@ export async function reviewSubmission(id: number, data: ReviewSubmissionInput):
   return res.json();
 }
 
+// Image Upload API
+export interface UploadResponse {
+  success: boolean;
+  url: string;
+  key: string;
+}
+
+export async function uploadImage(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const res = await fetch(`${API_BASE}/upload`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || 'Failed to upload image');
+  }
+
+  const data: UploadResponse = await res.json();
+  return data.url;
+}
+
 // Local storage for hints
 export function getRevealedHints(missionId: number): { hint1: boolean; hint2: boolean } {
   const stored = localStorage.getItem(`mission-hints-${missionId}`);

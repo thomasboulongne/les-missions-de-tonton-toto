@@ -1,14 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Box, Button, Flex, Text, TextArea, TextField, Select, Heading } from '@radix-ui/themes';
-import { createMission } from '../../lib/api';
-import type { CreateMissionInput, Difficulty } from '../../types';
+import { createMission, updateMission } from '../../lib/api';
+import { ImageUpload } from '../ImageUpload';
+import type { CreateMissionInput, Difficulty, Mission } from '../../types';
 import styles from './MissionForm.module.css';
 
 interface MissionFormProps {
   onSuccess?: () => void;
+  onCancel?: () => void;
+  mission?: Mission | null;
 }
 
-export function MissionForm({ onSuccess }: MissionFormProps) {
+export function MissionForm({ onSuccess, onCancel, mission }: MissionFormProps) {
+  const isEditing = !!mission;
+
   const [title, setTitle] = useState('');
   const [story, setStory] = useState('');
   const [objective, setObjective] = useState('');
@@ -22,6 +27,35 @@ export function MissionForm({ onSuccess }: MissionFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  // Populate form when editing
+  useEffect(() => {
+    if (mission) {
+      setTitle(mission.title);
+      setStory(mission.story);
+      setObjective(mission.objective);
+      setConstraintsText(mission.constraints.join('\n'));
+      setCriteriaText(mission.success_criteria.join('\n'));
+      setDifficulty(mission.difficulty);
+      setBannerImageUrl(mission.banner_image_url || '');
+      setSetupImageUrl(mission.setup_image_url || '');
+      setHint1(mission.hint1 || '');
+      setHint2(mission.hint2 || '');
+    }
+  }, [mission]);
+
+  const resetForm = () => {
+    setTitle('');
+    setStory('');
+    setObjective('');
+    setConstraintsText('');
+    setCriteriaText('');
+    setDifficulty('easy');
+    setBannerImageUrl('');
+    setSetupImageUrl('');
+    setHint1('');
+    setHint2('');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,27 +86,23 @@ export function MissionForm({ onSuccess }: MissionFormProps) {
         hint2: hint2 || undefined,
       };
 
-      await createMission(data);
+      if (isEditing) {
+        await updateMission(mission.id, data);
+      } else {
+        await createMission(data);
+      }
       setSuccess(true);
 
-      // Reset form
-      setTitle('');
-      setStory('');
-      setObjective('');
-      setConstraintsText('');
-      setCriteriaText('');
-      setDifficulty('easy');
-      setBannerImageUrl('');
-      setSetupImageUrl('');
-      setHint1('');
-      setHint2('');
+      if (!isEditing) {
+        resetForm();
+      }
 
       setTimeout(() => {
         setSuccess(false);
         onSuccess?.();
       }, 2000);
     } catch (err) {
-      setError('Erreur lors de la création de la mission');
+      setError(isEditing ? 'Erreur lors de la mise à jour de la mission' : 'Erreur lors de la création de la mission');
     } finally {
       setIsSubmitting(false);
     }
@@ -80,13 +110,20 @@ export function MissionForm({ onSuccess }: MissionFormProps) {
 
   return (
     <Box className={styles.container}>
-      <Heading size="5" className={styles.heading}>
-        Nouvelle mission
-      </Heading>
+      <Flex justify="between" align="center" mb="4">
+        <Heading size="5" className={styles.heading} style={{ marginBottom: 0 }}>
+          {isEditing ? `Modifier la mission #${mission.id}` : 'Nouvelle mission'}
+        </Heading>
+        {isEditing && onCancel && (
+          <Button variant="soft" color="gray" onClick={onCancel}>
+            ✕ Annuler
+          </Button>
+        )}
+      </Flex>
 
       {success && (
         <Box className={styles.successMessage}>
-          ✅ Mission créée avec succès !
+          ✅ {isEditing ? 'Mission mise à jour avec succès !' : 'Mission créée avec succès !'}
         </Box>
       )}
 
@@ -159,7 +196,11 @@ export function MissionForm({ onSuccess }: MissionFormProps) {
             <Text as="label" size="2" weight="bold" className={styles.label}>
               Difficulté
             </Text>
-            <Select.Root value={difficulty} onValueChange={(v) => setDifficulty(v as Difficulty)}>
+            <Select.Root
+              key={`difficulty-${mission?.id ?? 'new'}`}
+              value={difficulty}
+              onValueChange={(v) => setDifficulty(v as Difficulty)}
+            >
               <Select.Trigger className={styles.select} />
               <Select.Content>
                 <Select.Item value="easy">⭐ Facile</Select.Item>
@@ -169,29 +210,19 @@ export function MissionForm({ onSuccess }: MissionFormProps) {
             </Select.Root>
           </Box>
 
-          <Box>
-            <Text as="label" size="2" weight="bold" className={styles.label}>
-              URL de l'image bannière
-            </Text>
-            <TextField.Root
-              placeholder="https://..."
-              value={bannerImageUrl}
-              onChange={(e) => setBannerImageUrl(e.target.value)}
-              type="url"
-            />
-          </Box>
+          <ImageUpload
+            label="Image bannière"
+            value={bannerImageUrl}
+            onChange={setBannerImageUrl}
+            placeholder="Glissez une image de bannière ou cliquez pour parcourir"
+          />
 
-          <Box>
-            <Text as="label" size="2" weight="bold" className={styles.label}>
-              URL de l'image de configuration
-            </Text>
-            <TextField.Root
-              placeholder="https://..."
-              value={setupImageUrl}
-              onChange={(e) => setSetupImageUrl(e.target.value)}
-              type="url"
-            />
-          </Box>
+          <ImageUpload
+            label="Image de configuration"
+            value={setupImageUrl}
+            onChange={setSetupImageUrl}
+            placeholder="Glissez une image de configuration ou cliquez pour parcourir"
+          />
 
           <Box>
             <Text as="label" size="2" weight="bold" className={styles.label}>
@@ -229,7 +260,9 @@ export function MissionForm({ onSuccess }: MissionFormProps) {
             disabled={isSubmitting}
             className={styles.submitButton}
           >
-            {isSubmitting ? 'Création en cours...' : '🎯 Créer la mission'}
+            {isSubmitting
+              ? (isEditing ? 'Mise à jour...' : 'Création en cours...')
+              : (isEditing ? '💾 Enregistrer les modifications' : '🎯 Créer la mission')}
           </Button>
         </Flex>
       </form>

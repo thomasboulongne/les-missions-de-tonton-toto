@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { MissionForm } from '../components/MissionForm';
 import { DifficultyBadge } from '../components/DifficultyBadge';
 import { getSubmissions, reviewSubmission, getAllMissions, deleteMission } from '../lib/api';
-import type { Submission, MissionWithSubmissions } from '../types';
+import type { Submission, MissionWithSubmissions, Mission } from '../types';
 import styles from './Admin.module.css';
 
 interface SubmissionWithMission extends Submission {
@@ -16,6 +16,7 @@ export function Admin() {
   const [missions, setMissions] = useState<MissionWithSubmissions[]>([]);
   const [loading, setLoading] = useState(true);
   const [reviewNotes, setReviewNotes] = useState<Record<number, string>>({});
+  const [editingMission, setEditingMission] = useState<Mission | null>(null);
 
   const fetchData = async () => {
     try {
@@ -59,6 +60,19 @@ export function Admin() {
     }
   };
 
+  const handleEditMission = (mission: Mission) => {
+    setEditingMission(mission);
+  };
+
+  const handleEditSuccess = async () => {
+    setEditingMission(null);
+    await fetchData();
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMission(null);
+  };
+
   const unreviewedCount = submissions.filter((s) => !s.reviewed).length;
 
   return (
@@ -93,7 +107,13 @@ export function Admin() {
           </Tabs.Content>
 
           <Tabs.Content value="missions">
-            {loading ? (
+            {editingMission ? (
+              <MissionForm
+                mission={editingMission}
+                onSuccess={handleEditSuccess}
+                onCancel={handleCancelEdit}
+              />
+            ) : loading ? (
               <Text>Chargement...</Text>
             ) : missions.length === 0 ? (
               <Box className={styles.emptyState}>
@@ -124,14 +144,24 @@ export function Admin() {
                           Créée le {new Date(mission.created_at).toLocaleDateString('fr-FR')}
                         </Text>
                       </Box>
-                      <Button
-                        variant="soft"
-                        color="red"
-                        size="1"
-                        onClick={() => handleDeleteMission(mission.id)}
-                      >
-                        🗑️ Supprimer
-                      </Button>
+                      <Flex gap="2">
+                        <Button
+                          variant="soft"
+                          color="blue"
+                          size="1"
+                          onClick={() => handleEditMission(mission)}
+                        >
+                          ✏️ Modifier
+                        </Button>
+                        <Button
+                          variant="soft"
+                          color="red"
+                          size="1"
+                          onClick={() => handleDeleteMission(mission.id)}
+                        >
+                          🗑️ Supprimer
+                        </Button>
+                      </Flex>
                     </Flex>
                   </Card>
                 ))}

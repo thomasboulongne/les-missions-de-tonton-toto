@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Dialog, Button, Flex, Text, TextArea, TextField, Box } from '@radix-ui/themes';
 import { createSubmission } from '../../lib/api';
+import { ImageUpload } from '../ImageUpload';
 import styles from './SubmissionDialog.module.css';
 
 interface SubmissionDialogProps {
@@ -125,17 +126,12 @@ export function SubmissionDialog({
                 />
               </Box>
 
-              <Box>
-                <Text as="label" size="2" weight="bold" className={styles.label}>
-                  Image ou vidéo (URL)
-                </Text>
-                <TextField.Root
-                  placeholder="https://... (lien vers une image ou vidéo)"
-                  value={mediaUrl}
-                  onChange={(e) => setMediaUrl(e.target.value)}
-                  type="url"
-                />
-              </Box>
+              <ImageUpload
+                label="Photo ou capture d'écran"
+                value={mediaUrl}
+                onChange={setMediaUrl}
+                placeholder="Glissez une image ou clique pour parcourir"
+              />
 
               {error && (
                 <Text color="red" size="2">

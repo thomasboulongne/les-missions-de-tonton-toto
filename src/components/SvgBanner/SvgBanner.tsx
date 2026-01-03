@@ -1,10 +1,11 @@
 import { useRef, useEffect } from "react";
-import { gsap } from "gsap";
 import styles from "./SvgBanner.module.css";
-import { random } from "gsap/all";
+import { useAnimationStore } from "../../stores/animationStore";
 
 export function SvgBanner() {
   const svgRef = useRef<SVGSVGElement>(null);
+  const register = useAnimationStore((state) => state.register);
+  const unregister = useAnimationStore((state) => state.unregister);
 
   useEffect(() => {
     if (!svgRef.current) return;
@@ -18,46 +19,17 @@ export function SvgBanner() {
     const pickleRick = svg.querySelector("#Pickle_Rick");
     const u = svg.querySelector("#U");
 
-    const ctx = gsap.context(() => {
-      const tl = gsap.timeline();
-      tl.fromTo(
-        arc,
-        {
-          scaleY: 0,
-          opacity: 1,
-        },
-        {
-          scaleY: 1,
-          opacity: 1,
-          duration: 1,
-          ease: "elastic.out",
-          transformOrigin: "top center",
-        }
-      );
-      tl.fromTo(
-        [pinky, donut, triangle, pickleRick, u],
-        {
-          scale: 0,
-          opacity: 1,
-          rotate: "random(-360, 360)",
-          transformOrigin: "center center",
-        },
-        {
-          scale: 1,
-          opacity: 1,
-          rotate: 0,
-          duration: 1,
-          ease: "elastic.out",
-          from: "random",
-          transformOrigin: "center center",
-          stagger: () => 0.5 + random(0.5, 1),
-        },
-        "-=1.5"
-      );
-    }, svg);
+    if (!arc || !pinky || !donut || !triangle || !pickleRick || !u) return;
 
-    return () => ctx.revert();
-  }, []);
+    register("svgBanner", {
+      arc,
+      decorations: [pinky, donut, triangle, pickleRick, u],
+    });
+
+    return () => {
+      unregister("svgBanner");
+    };
+  }, [register, unregister]);
 
   return (
     <div className={styles.bannerWrapper}>

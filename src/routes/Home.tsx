@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Box, Button, Container, Text, Flex } from "@radix-ui/themes";
 import { Link } from "react-router-dom";
 import { MissionCard } from "../components/MissionCard";
@@ -6,6 +6,8 @@ import { HintsSection } from "../components/HintsSection";
 import { SubmissionDialog } from "../components/SubmissionDialog";
 import { Header } from "../components/Header";
 import { getCurrentMission } from "../lib/api";
+import { useEntranceAnimation } from "../hooks/useEntranceAnimation";
+import { useAnimationStore } from "../stores/animationStore";
 import type { Mission } from "../types";
 import styles from "./Home.module.css";
 
@@ -14,6 +16,19 @@ export function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  const subtitleRef = useRef<HTMLSpanElement>(null);
+  const register = useAnimationStore((state) => state.register);
+
+  // Orchestrate entrance animations
+  useEntranceAnimation();
+
+  // Register subtitle for animation
+  useEffect(() => {
+    if (subtitleRef.current && mission) {
+      register("subtitle", subtitleRef.current);
+    }
+  }, [register, mission]);
 
   const fetchMission = async () => {
     try {
@@ -35,7 +50,7 @@ export function Home() {
     return (
       <Container size="3" className={styles.container}>
         <Box className={styles.loading}>
-          <Text size="5">🤖 Chargement de ta mission...</Text>
+          {/* <Text size="5">🤖 Chargement de ta mission...</Text> */}
         </Box>
       </Container>
     );
@@ -86,7 +101,9 @@ export function Home() {
       <Header />
 
       <Container size="3" className={styles.container}>
-        <Text className={styles.subtitle}>Mission en cours</Text>
+        <Text ref={subtitleRef} className={styles.subtitle}>
+          Mission en cours
+        </Text>
 
         <MissionCard mission={mission} />
 
@@ -96,7 +113,7 @@ export function Home() {
           hint2={mission.hint2}
         />
 
-        <Flex gap="3" className={styles.actions}>
+        <Flex gap="3" className={styles.actions} justify={"center"}>
           <Button
             size="4"
             className={styles.submitButton}

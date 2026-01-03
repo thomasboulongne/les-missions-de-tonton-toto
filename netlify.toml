@@ -15,6 +15,12 @@
   to = "/.netlify/functions/:splat"
   status = 200
 
+# Image serving from Netlify Blobs
+[[redirects]]
+  from = "/images/*"
+  to = "/.netlify/functions/images/:splat"
+  status = 200
+
 # SPA fallback - only apply if file doesn't exist
 [[redirects]]
   from = "/*"

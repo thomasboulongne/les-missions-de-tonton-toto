@@ -52,7 +52,6 @@
 
 .actions {
   margin-top: 2rem;
-  justify-content: center;
   flex-wrap: wrap;
 }
 
@@ -80,4 +79,3 @@
     width: 100%;
   }
 }
-
