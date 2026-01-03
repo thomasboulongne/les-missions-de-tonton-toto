@@ -5,23 +5,20 @@
 
 [dev]
   command = "npm run dev"
-  targetPort = 5173
-  port = 8888
+  targetPort = 5174
+  port = 8889
   autoLaunch = false
-
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-  conditions = {Role = ["admin"]}
+  framework = "#custom"
 
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
 
+# SPA fallback - only apply if file doesn't exist
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
+  force = false
 

@@ -1,0 +1,2 @@
+export { SvgBanner } from "./SvgBanner";
+

@@ -1,0 +1,32 @@
+.heading {
+  text-align: center;
+  color: var(--accent-11);
+  font-size: 6vw;
+  display: flex;
+  flex-direction: column;
+}
+
+.headingTopLine {
+  display: block;
+  font-family: var(--font-display);
+  opacity: 0;
+}
+
+.headingBottomLine {
+  display: block;
+  font-size: 2em;
+  font-family: var(--font-oups);
+  font-weight: 400;
+  line-height: 0.5;
+}
+
+.headingBottomLineChar {
+  display: inline-block;
+  opacity: 0;
+}
+
+@media (max-width: 640px) {
+  .heading {
+    font-size: 1.6rem;
+  }
+}

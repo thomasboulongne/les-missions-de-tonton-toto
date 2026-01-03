@@ -1,0 +1,12 @@
+.header {
+  margin-bottom: 0;
+  position: relative;
+  margin-bottom: 15vw;
+}
+
+.title {
+  position: absolute;
+  left: 50%;
+  bottom: -5vw;
+  translate: -50% 50%;
+}

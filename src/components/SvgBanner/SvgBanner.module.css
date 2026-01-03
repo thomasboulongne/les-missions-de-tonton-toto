@@ -1,0 +1,16 @@
+.bannerWrapper {
+  position: relative;
+  width: 100%;
+  height: 30vw;
+}
+
+.banner {
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  overflow: visible;
+}
+
+.shape {
+  opacity: 0;
+}
