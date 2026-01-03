@@ -59,7 +59,7 @@ export default async (req: Request, context: Context) => {
     // POST - Create submission
     if (req.method === 'POST') {
       const body = await req.json();
-      const { mission_id, what_happened, what_was_hard, link_url, media_url } = body;
+      const { mission_id, what_happened, what_was_hard, link_url, media_url, media_url_2 } = body;
 
       if (!mission_id || !what_happened) {
         return new Response(
@@ -69,8 +69,8 @@ export default async (req: Request, context: Context) => {
       }
 
       const result = await sql`
-        INSERT INTO submissions (mission_id, what_happened, what_was_hard, link_url, media_url)
-        VALUES (${mission_id}, ${what_happened}, ${what_was_hard || null}, ${link_url || null}, ${media_url || null})
+        INSERT INTO submissions (mission_id, what_happened, what_was_hard, link_url, media_url, media_url_2)
+        VALUES (${mission_id}, ${what_happened}, ${what_was_hard || null}, ${link_url || null}, ${media_url || null}, ${media_url_2 || null})
         RETURNING *
       `;
 

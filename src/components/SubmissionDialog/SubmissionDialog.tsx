@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Dialog, Button, Flex, Text, TextArea, TextField, Box } from '@radix-ui/themes';
 import { createSubmission } from '../../lib/api';
-import { ImageUpload } from '../ImageUpload';
+import { MediaUpload } from '../MediaUpload';
 import styles from './SubmissionDialog.module.css';
 
 interface SubmissionDialogProps {
@@ -23,6 +23,7 @@ export function SubmissionDialog({
   const [whatWasHard, setWhatWasHard] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
   const [mediaUrl, setMediaUrl] = useState('');
+  const [mediaUrl2, setMediaUrl2] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -39,6 +40,7 @@ export function SubmissionDialog({
         what_was_hard: whatWasHard || undefined,
         link_url: linkUrl || undefined,
         media_url: mediaUrl || undefined,
+        media_url_2: mediaUrl2 || undefined,
       });
       setSuccess(true);
       setTimeout(() => {
@@ -48,6 +50,7 @@ export function SubmissionDialog({
         setWhatWasHard('');
         setLinkUrl('');
         setMediaUrl('');
+        setMediaUrl2('');
         onSuccess?.();
       }, 2000);
     } catch (err) {
@@ -62,6 +65,7 @@ export function SubmissionDialog({
     setWhatWasHard('');
     setLinkUrl('');
     setMediaUrl('');
+    setMediaUrl2('');
     setError(null);
     setSuccess(false);
   };
@@ -126,11 +130,20 @@ export function SubmissionDialog({
                 />
               </Box>
 
-              <ImageUpload
-                label="Photo ou capture d'écran"
+              <MediaUpload
+                label="🤖 Vidéo du robot en action"
                 value={mediaUrl}
                 onChange={setMediaUrl}
-                placeholder="Glissez une image ou clique pour parcourir"
+                placeholder="Montre ton robot qui fait la mission !"
+                acceptVideo
+              />
+
+              <MediaUpload
+                label="💻 Capture d'écran du programme"
+                value={mediaUrl2}
+                onChange={setMediaUrl2}
+                placeholder="Montre ton programme mBlock"
+                acceptVideo={false}
               />
 
               {error && (

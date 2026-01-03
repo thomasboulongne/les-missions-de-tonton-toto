@@ -25,10 +25,14 @@ CREATE TABLE IF NOT EXISTS submissions (
   what_was_hard TEXT,
   link_url TEXT,
   media_url TEXT,
+  media_url_2 TEXT,
   submitted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   reviewed BOOLEAN DEFAULT FALSE,
   review_notes TEXT
 );
+
+-- Migration: Add media_url_2 column if it doesn't exist
+-- ALTER TABLE submissions ADD COLUMN IF NOT EXISTS media_url_2 TEXT;
 
 -- Index for faster lookups
 CREATE INDEX IF NOT EXISTS idx_submissions_mission_id ON submissions(mission_id);

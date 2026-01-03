@@ -22,6 +22,7 @@ export interface Submission {
   what_was_hard: string | null;
   link_url: string | null;
   media_url: string | null;
+  media_url_2: string | null;
   submitted_at: string;
   reviewed: boolean;
   review_notes: string | null;
@@ -50,6 +51,7 @@ export interface CreateSubmissionInput {
   what_was_hard?: string;
   link_url?: string;
   media_url?: string;
+  media_url_2?: string;
 }
 
 export interface ReviewSubmissionInput {

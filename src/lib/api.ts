@@ -90,7 +90,7 @@ export async function reviewSubmission(id: number, data: ReviewSubmissionInput):
   return res.json();
 }
 
-// Image Upload API
+// Media Upload API (images and videos)
 export interface UploadResponse {
   success: boolean;
   url: string;
@@ -98,6 +98,10 @@ export interface UploadResponse {
 }
 
 export async function uploadImage(file: File): Promise<string> {
+  return uploadMedia(file);
+}
+
+export async function uploadMedia(file: File): Promise<string> {
   const formData = new FormData();
   formData.append('file', file);
 
@@ -108,7 +112,7 @@ export async function uploadImage(file: File): Promise<string> {
 
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.error || 'Failed to upload image');
+    throw new Error(error.error || 'Failed to upload file');
   }
 
   const data: UploadResponse = await res.json();
