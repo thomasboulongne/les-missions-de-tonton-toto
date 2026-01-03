@@ -15,6 +15,7 @@ export interface AnimationElements {
   heading: HeadingElements | null;
   subtitle: HTMLElement | null;
   missionCard: HTMLElement | null;
+  loadingState: HTMLElement | null;
 }
 
 interface AnimationStore {
@@ -32,6 +33,7 @@ const initialElements: AnimationElements = {
   heading: null,
   subtitle: null,
   missionCard: null,
+  loadingState: null,
 };
 
 export const useAnimationStore = create<AnimationStore>((set) => ({
@@ -49,4 +51,3 @@ export const useAnimationStore = create<AnimationStore>((set) => ({
 
   reset: () => set({ elements: { ...initialElements } }),
 }));
-

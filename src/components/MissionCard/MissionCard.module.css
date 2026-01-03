@@ -2,6 +2,9 @@
   overflow: hidden;
   background: var(--color-panel-solid);
   border-radius: 16px;
+  opacity: 0;
+  /* Disable global slideIn animation - GSAP handles this */
+  animation: none !important;
 }
 
 .compact {
