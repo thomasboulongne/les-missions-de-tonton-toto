@@ -26,7 +26,10 @@ export function Home() {
   const {
     send,
     onMissionLoaded,
+    onLoadingElementReady,
+    onMissionContentReady,
     isHeaderComplete,
+    isAwaitingLoading,
     isAnimatingLoading,
     showMission,
   } = useAnimationStateMachine();
@@ -38,27 +41,33 @@ export function Home() {
     }
   }, [elements.svgBanner, elements.heading, send]);
 
-  // Register subtitle for animation when mission is available
-  // Must depend on showMission so effect re-runs when subtitle first renders
+  // Register and notify FSM when loading element is ready
+  useEffect(() => {
+    if (loadingRef.current) {
+      register("loadingState", loadingRef.current);
+      onLoadingElementReady();
+    }
+  }, [register, onLoadingElementReady]);
+
+  // Register subtitle when it renders
   useEffect(() => {
     if (subtitleRef.current) {
       register("subtitle", subtitleRef.current);
     }
   }, [register, mission, showMission]);
 
-  // Register loading state element for animation
+  // Notify FSM when mission content elements are ready
   useEffect(() => {
-    if (loadingRef.current) {
-      register("loadingState", loadingRef.current);
+    if (elements.subtitle && elements.missionCard) {
+      onMissionContentReady();
     }
-  }, [register]);
+  }, [elements.subtitle, elements.missionCard, onMissionContentReady]);
 
   const fetchMission = useCallback(async () => {
     try {
       setLoading(true);
       const data = await getCurrentMission();
       setMission(data);
-      // Notify FSM that mission is loaded
       if (data) {
         onMissionLoaded();
       }
@@ -73,7 +82,7 @@ export function Home() {
     fetchMission();
   }, [fetchMission]);
 
-  // Show error state (no animation needed)
+  // Error state (no animation)
   if (error) {
     return (
       <div className={styles.page}>
@@ -89,11 +98,10 @@ export function Home() {
     );
   }
 
-  // Determine what content to show based on FSM state
-  // Show loading if: still loading data OR FSM is animating loading state
-  const shouldShowLoading = loading || isAnimatingLoading;
+  // Show loading when: fetching data OR FSM is awaiting/animating loading
+  const shouldShowLoading = loading || isAwaitingLoading || isAnimatingLoading;
 
-  // Show mission when FSM says so (after header complete and ready to animate mission)
+  // Show mission when FSM allows
   const shouldShowMission = showMission && mission;
 
   return (
@@ -134,7 +142,7 @@ export function Home() {
           </>
         )}
 
-        {/* Mission content - render when FSM allows */}
+        {/* Mission content */}
         {shouldShowMission && (
           <>
             <Text ref={subtitleRef} className={styles.subtitle}>
