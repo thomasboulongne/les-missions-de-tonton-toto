@@ -1,25 +1,24 @@
-import type { Context } from '@netlify/functions';
-import { getStore } from '@netlify/blobs';
+import { getStore } from "@netlify/blobs";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 
-export default async (req: Request, context: Context) => {
+export default async (req: Request) => {
   // CORS headers
   const headers = {
-    'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    "Content-Type": "application/json",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
   };
 
   // Handle preflight
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers });
   }
 
-  if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
       headers,
     });
@@ -27,10 +26,10 @@ export default async (req: Request, context: Context) => {
 
   try {
     const formData = await req.formData();
-    const file = formData.get('file') as File | null;
+    const file = formData.get("file") as File | null;
 
     if (!file) {
-      return new Response(JSON.stringify({ error: 'No file provided' }), {
+      return new Response(JSON.stringify({ error: "No file provided" }), {
         status: 400,
         headers,
       });
@@ -40,7 +39,7 @@ export default async (req: Request, context: Context) => {
     if (!ALLOWED_TYPES.includes(file.type)) {
       return new Response(
         JSON.stringify({
-          error: 'Invalid file type. Allowed: JPEG, PNG, GIF, WebP',
+          error: "Invalid file type. Allowed: JPEG, PNG, GIF, WebP",
         }),
         { status: 400, headers }
       );
@@ -49,19 +48,25 @@ export default async (req: Request, context: Context) => {
     // Validate file size
     if (file.size > MAX_FILE_SIZE) {
       return new Response(
-        JSON.stringify({ error: 'File too large. Maximum size is 5MB' }),
+        JSON.stringify({ error: "File too large. Maximum size is 5MB" }),
         { status: 400, headers }
       );
     }
 
     // Generate unique key for the file
-    const ext = file.name.split('.').pop() || 'jpg';
+    const ext = file.name.split(".").pop() || "jpg";
     const timestamp = Date.now();
     const randomId = Math.random().toString(36).substring(2, 10);
     const key = `uploads/${timestamp}-${randomId}.${ext}`;
 
-    // Get the blob store
-    const store = getStore('images');
+    // Get the blob store with site-scoped configuration
+    const store = getStore({
+      name: "images",
+      siteID: process.env.SITE_ID,
+      //   token:
+      //     process.env.BLOB_READ_WRITE_TOKEN ||
+      //     Netlify.env.get("BLOB_READ_WRITE_TOKEN"),
+    });
 
     // Convert file to ArrayBuffer and store
     const arrayBuffer = await file.arrayBuffer();
@@ -84,14 +89,13 @@ export default async (req: Request, context: Context) => {
       { status: 201, headers }
     );
   } catch (error) {
-    console.error('Upload error:', error);
+    console.error("Upload error:", error);
     return new Response(
       JSON.stringify({
-        error: 'Failed to upload file',
+        error: "Failed to upload file",
         details: String(error),
       }),
       { status: 500, headers }
     );
   }
 };
-
