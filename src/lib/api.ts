@@ -119,6 +119,66 @@ export async function uploadMedia(file: File): Promise<string> {
   return data.url;
 }
 
+// Image optimization helper
+export interface ImageOptimizationOptions {
+  width?: number;
+  height?: number;
+  quality?: number;
+  format?: 'webp' | 'avif' | 'jpeg' | 'png';
+  fit?: 'cover' | 'contain' | 'fill' | 'inside' | 'outside';
+}
+
+/**
+ * Generate an optimized image URL with transformation parameters.
+ *
+ * @param url - Original image URL (must be a /images/ path)
+ * @param options - Transformation options
+ * @returns URL with query parameters for on-demand optimization
+ *
+ * @example
+ * // Resize to 800px width with WebP format
+ * getOptimizedImageUrl('/images/uploads/photo.jpg', { width: 800, format: 'webp' })
+ * // => '/images/uploads/photo.jpg?w=800&f=webp'
+ *
+ * @example
+ * // Thumbnail with custom quality
+ * getOptimizedImageUrl(imageUrl, { width: 200, height: 200, quality: 70, fit: 'cover' })
+ */
+export function getOptimizedImageUrl(
+  url: string,
+  options?: ImageOptimizationOptions
+): string {
+  // Return as-is if no options or not an image path
+  if (!options || !url || !url.startsWith('/images/')) {
+    return url;
+  }
+
+  const params = new URLSearchParams();
+
+  if (options.width) {
+    params.set('w', String(Math.min(options.width, 2000)));
+  }
+
+  if (options.height) {
+    params.set('h', String(Math.min(options.height, 2000)));
+  }
+
+  if (options.quality) {
+    params.set('q', String(Math.min(Math.max(options.quality, 1), 100)));
+  }
+
+  if (options.format) {
+    params.set('f', options.format);
+  }
+
+  if (options.fit) {
+    params.set('fit', options.fit);
+  }
+
+  const queryString = params.toString();
+  return queryString ? `${url}?${queryString}` : url;
+}
+
 // Local storage for hints
 export function getRevealedHints(missionId: number): { hint1: boolean; hint2: boolean } {
   const stored = localStorage.getItem(`mission-hints-${missionId}`);

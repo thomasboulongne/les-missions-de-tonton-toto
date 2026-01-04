@@ -3,6 +3,7 @@ import { Box, Container, Heading, Text, Tabs, Card, Button, Badge, Flex, TextAre
 import { Link } from 'react-router-dom';
 import { MissionForm } from '../components/MissionForm';
 import { DifficultyBadge } from '../components/DifficultyBadge';
+import { OptimizedImage } from '../components/OptimizedImage';
 import { getSubmissions, reviewSubmission, getAllMissions, deleteMission } from '../lib/api';
 import type { Submission, MissionWithSubmissions, Mission } from '../types';
 import styles from './Admin.module.css';
@@ -237,10 +238,13 @@ export function Admin() {
                             <strong>Média :</strong>
                           </Text>
                           <a href={submission.media_url} target="_blank" rel="noopener noreferrer">
-                            <img
+                            <OptimizedImage
                               src={submission.media_url}
                               alt="Média soumis"
                               className={styles.mediaPreview}
+                              sizes="300px"
+                              widths={[300, 600]}
+                              quality={80}
                               onError={(e) => {
                                 (e.target as HTMLImageElement).style.display = 'none';
                               }}

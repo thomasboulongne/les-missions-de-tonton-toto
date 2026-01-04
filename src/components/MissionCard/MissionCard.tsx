@@ -1,6 +1,7 @@
 import { useRef, useEffect } from "react";
 import { Box, Card, Heading, Inset, Text } from "@radix-ui/themes";
 import { DifficultyBadge } from "../DifficultyBadge";
+import { OptimizedImage } from "../OptimizedImage";
 import type { Mission } from "../../types";
 import styles from "./MissionCard.module.css";
 import { useAnimationStore } from "../../stores/animationStore";
@@ -37,10 +38,13 @@ export function MissionCard({ mission, compact = false }: MissionCardProps) {
           pb={"current"}
           className={styles.bannerContainer}
         >
-          <img
+          <OptimizedImage
             src={mission.banner_image_url}
             alt={mission.title}
             className={styles.banner}
+            sizes={compact ? "(max-width: 768px) 100vw, 400px" : "100vw"}
+            widths={compact ? [320, 400, 640] : [640, 768, 1024, 1280, 1536]}
+            quality={85}
           />
         </Inset>
       )}
@@ -61,10 +65,13 @@ export function MissionCard({ mission, compact = false }: MissionCardProps) {
           <>
             {mission.setup_image_url && (
               <Box className={styles.setupImageContainer}>
-                <img
+                <OptimizedImage
                   src={mission.setup_image_url}
                   alt="Configuration de la mission"
                   className={styles.setupImage}
+                  sizes="(max-width: 768px) 100vw, 800px"
+                  widths={[320, 640, 800, 1024]}
+                  quality={85}
                 />
               </Box>
             )}
