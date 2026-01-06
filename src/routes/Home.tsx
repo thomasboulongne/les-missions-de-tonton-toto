@@ -166,7 +166,7 @@ export function Home() {
   const shouldShowLoading = loading || isAwaitingLoading || isAnimatingLoading;
 
   // Render mission content early (hidden) so elements register before animation
-  const shouldRenderMission = mission;
+  const shouldRenderMission = Boolean(mission);
 
   // Show the most recent unread review
   const latestUnreadReview = unreadReviews.length > 0 ? unreadReviews[0] : null;
