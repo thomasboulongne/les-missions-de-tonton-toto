@@ -138,7 +138,37 @@ export default async (req: Request) => {
       siteID: process.env.SITE_ID,
     });
 
-    // Fetch original image metadata first to check content type
+    // If transformation is needed, check cache FIRST (before fetching original)
+    if (needsTransformation(options)) {
+      const cacheKey = generateCacheKey(key, options);
+
+      try {
+        const { data: cachedData, metadata: cachedMetadata } =
+          await cacheStore.getWithMetadata(cacheKey, {
+            type: "arrayBuffer",
+          });
+
+        if (cachedData) {
+          const cachedContentType =
+            (cachedMetadata as { contentType?: string })?.contentType ||
+            "image/jpeg";
+
+          return new Response(cachedData, {
+            status: 200,
+            headers: {
+              "Content-Type": cachedContentType,
+              "Cache-Control": "public, max-age=31536000, immutable",
+              "Access-Control-Allow-Origin": "*",
+              "X-Cache": "HIT",
+            },
+          });
+        }
+      } catch {
+        // Cache miss or error, continue to fetch and transform
+      }
+    }
+
+    // Only fetch original if cache miss or no transformation needed
     const { data: originalData, metadata } = await imageStore.getWithMetadata(
       key,
       {
@@ -177,34 +207,8 @@ export default async (req: Request) => {
       });
     }
 
-    // Generate cache key for transformed image
+    // Generate cache key for transformed image (cache miss path)
     const cacheKey = generateCacheKey(key, options);
-
-    // Check cache for transformed image
-    try {
-      const { data: cachedData, metadata: cachedMetadata } =
-        await cacheStore.getWithMetadata(cacheKey, {
-          type: "arrayBuffer",
-        });
-
-      if (cachedData) {
-        const cachedContentType =
-          (cachedMetadata as { contentType?: string })?.contentType ||
-          contentType;
-
-        return new Response(cachedData, {
-          status: 200,
-          headers: {
-            "Content-Type": cachedContentType,
-            "Cache-Control": "public, max-age=31536000, immutable",
-            "Access-Control-Allow-Origin": "*",
-            "X-Cache": "HIT",
-          },
-        });
-      }
-    } catch {
-      // Cache miss or error, continue to transform
-    }
 
     // Transform the image
     let transformer = sharp(Buffer.from(originalData));
@@ -218,7 +222,8 @@ export default async (req: Request) => {
     }
 
     // Convert format and set quality
-    const outputFormat = options.format || getFormatFromContentType(contentType);
+    const outputFormat =
+      options.format || getFormatFromContentType(contentType);
     const outputContentType = CONTENT_TYPE_MAP[outputFormat] || contentType;
 
     switch (outputFormat) {
@@ -243,13 +248,18 @@ export default async (req: Request) => {
     const transformedBuffer = await transformer.toBuffer();
 
     // Cache the transformed image (async, don't wait)
+    // Convert Buffer to ArrayBuffer for Response and blob store compatibility
+    const transformedArrayBuffer = transformedBuffer.buffer.slice(
+      transformedBuffer.byteOffset,
+      transformedBuffer.byteOffset + transformedBuffer.byteLength
+    ) as ArrayBuffer;
     cacheStore
-      .set(cacheKey, transformedBuffer, {
+      .set(cacheKey, transformedArrayBuffer, {
         metadata: { contentType: outputContentType },
       })
       .catch((err) => console.error("Failed to cache transformed image:", err));
 
-    return new Response(transformedBuffer, {
+    return new Response(transformedArrayBuffer, {
       status: 200,
       headers: {
         "Content-Type": outputContentType,
@@ -264,9 +274,7 @@ export default async (req: Request) => {
   }
 };
 
-function getFormatFromContentType(
-  contentType: string
-): keyof sharp.FormatEnum {
+function getFormatFromContentType(contentType: string): keyof sharp.FormatEnum {
   const map: Record<string, keyof sharp.FormatEnum> = {
     "image/jpeg": "jpeg",
     "image/png": "png",
