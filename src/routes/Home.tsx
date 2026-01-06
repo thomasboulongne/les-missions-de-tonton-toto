@@ -42,10 +42,8 @@ export function Home() {
     onMissionLoaded,
     onLoadingElementReady,
     onMissionContentReady,
-    isHeaderComplete,
     isAwaitingLoading,
     isAnimatingLoading,
-    showMission,
   } = useAnimationStateMachine();
 
   // Start header animation when header elements are ready
@@ -121,14 +119,14 @@ export function Home() {
     // - Permission is 'default' (not yet asked)
     // - We haven't prompted before
     // - Mission is loaded (don't interrupt loading)
-    if (permission === "default" && !alreadyAsked && showMission) {
+    if (permission === "default" && !alreadyAsked) {
       // Delay the prompt a bit so it doesn't appear immediately
       const timer = setTimeout(() => {
         setShowPushPrompt(true);
       }, 3000);
       return () => clearTimeout(timer);
     }
-  }, [showMission]);
+  }, []);
 
   const handleDismissFeedback = () => {
     markReviewsAsSeen();
@@ -208,7 +206,7 @@ export function Home() {
         )}
 
         {/* Empty state */}
-        {!loading && !mission && isHeaderComplete && (
+        {!loading && !mission && (
           <>
             <Text ref={subtitleRef} className={styles.subtitle}>
               Toutes les missions terminées
@@ -236,7 +234,7 @@ export function Home() {
 
         {/* Mission content - render early so elements register before animation
             Elements start with opacity: 0 in CSS, animation will reveal them */}
-        {shouldRenderMission && (
+        {shouldRenderMission && mission && (
           <>
             <Text ref={subtitleRef} className={styles.subtitle}>
               Mission en cours
@@ -244,40 +242,35 @@ export function Home() {
 
             <MissionCard mission={mission} />
 
-            {/* Only show interactive elements after animation completes */}
-            {showMission && (
-              <>
-                <HintsSection
-                  missionId={mission.id}
-                  hint1={mission.hint1}
-                  hint2={mission.hint2}
-                />
+            <HintsSection
+              missionId={mission.id}
+              hint1={mission.hint1}
+              hint2={mission.hint2}
+            />
 
-                <Flex gap="3" className={styles.actions} justify={"center"}>
-                  <Button
-                    size="4"
-                    className={styles.submitButton}
-                    onClick={() => setDialogOpen(true)}
-                  >
-                    🎉 J'ai terminé ma mission !
-                  </Button>
+            <Flex gap="3" className={styles.actions} justify={"center"}>
+              <Button
+                size="4"
+                className={styles.submitButton}
+                onClick={() => setDialogOpen(true)}
+              >
+                🎉 J'ai terminé ma mission !
+              </Button>
 
-                  <Link to="/missions">
-                    <Button size="4" variant="soft">
-                      📚 Archives
-                    </Button>
-                  </Link>
-                </Flex>
+              <Link to="/missions">
+                <Button size="4" variant="soft">
+                  📚 Archives
+                </Button>
+              </Link>
+            </Flex>
 
-                <SubmissionDialog
-                  missionId={mission.id}
-                  missionTitle={mission.title}
-                  open={dialogOpen}
-                  onOpenChange={setDialogOpen}
-                  onSuccess={fetchMission}
-                />
-              </>
-            )}
+            <SubmissionDialog
+              missionId={mission.id}
+              missionTitle={mission.title}
+              open={dialogOpen}
+              onOpenChange={setDialogOpen}
+              onSuccess={fetchMission}
+            />
           </>
         )}
       </Container>
