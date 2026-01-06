@@ -4,11 +4,21 @@ import { Link } from "react-router-dom";
 import { MissionCard } from "../components/MissionCard";
 import { HintsSection } from "../components/HintsSection";
 import { SubmissionDialog } from "../components/SubmissionDialog";
+import { FeedbackCard } from "../components/FeedbackCard";
 import { Header } from "../components/Header";
-import { getCurrentMission } from "../lib/api";
+import { getCurrentMission, getUnreadReviews } from "../lib/api";
+import {
+  isPushSupported,
+  getNotificationPermission,
+  subscribeToPush,
+  getLastSeenReviewTime,
+  markReviewsAsSeen,
+  hasPushPermissionBeenAsked,
+  markPushPermissionAsked,
+} from "../lib/pushNotifications";
 import { useAnimationStateMachine } from "../hooks/useAnimationStateMachine";
 import { useAnimationStore } from "../stores/animationStore";
-import type { Mission } from "../types";
+import type { Mission, SubmissionWithMission } from "../types";
 import styles from "./Home.module.css";
 
 export function Home() {
@@ -16,6 +26,8 @@ export function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [unreadReviews, setUnreadReviews] = useState<SubmissionWithMission[]>([]);
+  const [showPushPrompt, setShowPushPrompt] = useState(false);
 
   const subtitleRef = useRef<HTMLSpanElement>(null);
   const loadingRef = useRef<HTMLDivElement>(null);
@@ -63,6 +75,19 @@ export function Home() {
     }
   }, [elements.subtitle, elements.missionCard, onMissionContentReady]);
 
+  // Check for unread reviews
+  const checkUnreadReviews = useCallback(async () => {
+    try {
+      const lastSeen = getLastSeenReviewTime();
+      // If never seen, use a date far in the past
+      const since = lastSeen || '1970-01-01T00:00:00.000Z';
+      const reviews = await getUnreadReviews(since);
+      setUnreadReviews(reviews);
+    } catch (err) {
+      console.error('Error checking unread reviews:', err);
+    }
+  }, []);
+
   const fetchMission = useCallback(async () => {
     try {
       setLoading(true);
@@ -80,7 +105,44 @@ export function Home() {
 
   useEffect(() => {
     fetchMission();
-  }, [fetchMission]);
+    checkUnreadReviews();
+  }, [fetchMission, checkUnreadReviews]);
+
+  // Check if we should show push notification prompt
+  useEffect(() => {
+    if (!isPushSupported()) return;
+
+    const permission = getNotificationPermission();
+    const alreadyAsked = hasPushPermissionBeenAsked();
+
+    // Show prompt if:
+    // - Permission is 'default' (not yet asked)
+    // - We haven't prompted before
+    // - Mission is loaded (don't interrupt loading)
+    if (permission === 'default' && !alreadyAsked && showMission) {
+      // Delay the prompt a bit so it doesn't appear immediately
+      const timer = setTimeout(() => {
+        setShowPushPrompt(true);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showMission]);
+
+  const handleDismissFeedback = () => {
+    markReviewsAsSeen();
+    setUnreadReviews([]);
+  };
+
+  const handleEnablePush = async () => {
+    markPushPermissionAsked();
+    setShowPushPrompt(false);
+    await subscribeToPush();
+  };
+
+  const handleDismissPushPrompt = () => {
+    markPushPermissionAsked();
+    setShowPushPrompt(false);
+  };
 
   // Error state (no animation)
   if (error) {
@@ -104,10 +166,38 @@ export function Home() {
   // Show mission when FSM allows
   const shouldShowMission = showMission && mission;
 
+  // Show the most recent unread review
+  const latestUnreadReview = unreadReviews.length > 0 ? unreadReviews[0] : null;
+
   return (
     <div className={styles.page}>
       <Header />
       <Container size="3" className={styles.container}>
+        {/* Feedback card for unread reviews */}
+        {latestUnreadReview && !shouldShowLoading && (
+          <FeedbackCard
+            submission={latestUnreadReview}
+            onDismiss={handleDismissFeedback}
+          />
+        )}
+
+        {/* Push notification prompt */}
+        {showPushPrompt && (
+          <Box className={styles.pushPrompt}>
+            <Text size="2">
+              🔔 Recevoir une notification quand Tonton Toto répond ?
+            </Text>
+            <Flex gap="2" mt="2">
+              <Button size="1" onClick={handleEnablePush}>
+                Oui !
+              </Button>
+              <Button size="1" variant="soft" onClick={handleDismissPushPrompt}>
+                Plus tard
+              </Button>
+            </Flex>
+          </Box>
+        )}
+
         {/* Loading state */}
         {shouldShowLoading && (
           <Box ref={loadingRef} className={styles.loading}>

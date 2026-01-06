@@ -5,12 +5,8 @@ import { MissionForm } from '../components/MissionForm';
 import { DifficultyBadge } from '../components/DifficultyBadge';
 import { OptimizedImage } from '../components/OptimizedImage';
 import { getSubmissions, reviewSubmission, getAllMissions, deleteMission } from '../lib/api';
-import type { Submission, MissionWithSubmissions, Mission } from '../types';
+import type { MissionWithSubmissions, Mission, SubmissionStatus, SubmissionWithMission } from '../types';
 import styles from './Admin.module.css';
-
-interface SubmissionWithMission extends Submission {
-  mission_title: string;
-}
 
 export function Admin() {
   const [submissions, setSubmissions] = useState<SubmissionWithMission[]>([]);
@@ -39,15 +35,27 @@ export function Admin() {
     fetchData();
   }, []);
 
-  const handleReview = async (id: number, reviewed: boolean) => {
+  const handleReview = async (id: number, status: SubmissionStatus) => {
     try {
       await reviewSubmission(id, {
-        reviewed,
+        status,
         review_notes: reviewNotes[id] || undefined,
       });
       await fetchData();
     } catch (err) {
       console.error('Error reviewing submission:', err);
+    }
+  };
+
+  const handleSaveNotes = async (id: number, currentStatus: SubmissionStatus) => {
+    try {
+      await reviewSubmission(id, {
+        status: currentStatus,
+        review_notes: reviewNotes[id] || undefined,
+      });
+      await fetchData();
+    } catch (err) {
+      console.error('Error saving notes:', err);
     }
   };
 
@@ -74,7 +82,18 @@ export function Admin() {
     setEditingMission(null);
   };
 
-  const unreviewedCount = submissions.filter((s) => !s.reviewed).length;
+  const pendingCount = submissions.filter((s) => s.status === 'pending').length;
+
+  const getStatusBadge = (status: SubmissionStatus) => {
+    switch (status) {
+      case 'approved':
+        return <Badge color="green">✓ Validé</Badge>;
+      case 'needs_work':
+        return <Badge color="orange">💪 À retravailler</Badge>;
+      default:
+        return <Badge color="gray">⏳ En attente</Badge>;
+    }
+  };
 
   return (
     <Container size="4" className={styles.container}>
@@ -96,8 +115,8 @@ export function Admin() {
           </Tabs.Trigger>
           <Tabs.Trigger value="submissions" className={styles.tabTrigger}>
             📝 Soumissions
-            {unreviewedCount > 0 && (
-              <Badge color="red" size="1" ml="2">{unreviewedCount}</Badge>
+            {pendingCount > 0 && (
+              <Badge color="red" size="1" ml="2">{pendingCount}</Badge>
             )}
           </Tabs.Trigger>
         </Tabs.List>
@@ -182,7 +201,13 @@ export function Admin() {
                 {submissions.map((submission) => (
                   <Card
                     key={submission.id}
-                    className={`${styles.submissionCard} ${submission.reviewed ? styles.reviewed : styles.pending}`}
+                    className={`${styles.submissionCard} ${
+                      submission.status === 'approved'
+                        ? styles.approved
+                        : submission.status === 'needs_work'
+                          ? styles.needsWork
+                          : styles.pending
+                    }`}
                   >
                     <Flex justify="between" align="start" mb="3">
                       <Box>
@@ -199,9 +224,7 @@ export function Admin() {
                           })}
                         </Text>
                       </Box>
-                      <Badge color={submission.reviewed ? 'green' : 'orange'}>
-                        {submission.reviewed ? '✓ Vérifié' : '⏳ En attente'}
-                      </Badge>
+                      {getStatusBadge(submission.status)}
                     </Flex>
 
                     <Box className={styles.submissionContent}>
@@ -259,10 +282,10 @@ export function Admin() {
 
                     <Box className={styles.reviewSection}>
                       <Text as="label" size="2" weight="bold" className={styles.label}>
-                        Notes de review :
+                        Message pour ton neveu :
                       </Text>
                       <TextArea
-                        placeholder="Ajouter des notes pour cette soumission..."
+                        placeholder="Écris un message encourageant..."
                         value={reviewNotes[submission.id] ?? submission.review_notes ?? ''}
                         onChange={(e) => setReviewNotes({
                           ...reviewNotes,
@@ -271,27 +294,61 @@ export function Admin() {
                         rows={2}
                         className={styles.reviewTextarea}
                       />
-                      <Flex gap="2" mt="3">
-                        {!submission.reviewed ? (
-                          <Button
-                            color="green"
-                            onClick={() => handleReview(submission.id, true)}
-                          >
-                            ✓ Marquer comme vérifié
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="soft"
-                            onClick={() => handleReview(submission.id, false)}
-                          >
-                            ↩ Marquer comme non vérifié
-                          </Button>
+                      <Flex gap="2" mt="3" wrap="wrap">
+                        {submission.status === 'pending' && (
+                          <>
+                            <Button
+                              color="green"
+                              onClick={() => handleReview(submission.id, 'approved')}
+                            >
+                              🎉 Approuver
+                            </Button>
+                            <Button
+                              color="orange"
+                              onClick={() => handleReview(submission.id, 'needs_work')}
+                            >
+                              💪 À retravailler
+                            </Button>
+                          </>
+                        )}
+                        {submission.status === 'approved' && (
+                          <>
+                            <Button
+                              variant="soft"
+                              color="orange"
+                              onClick={() => handleReview(submission.id, 'needs_work')}
+                            >
+                              💪 Changer en "À retravailler"
+                            </Button>
+                            <Button
+                              variant="soft"
+                              onClick={() => handleReview(submission.id, 'pending')}
+                            >
+                              ↩ Remettre en attente
+                            </Button>
+                          </>
+                        )}
+                        {submission.status === 'needs_work' && (
+                          <>
+                            <Button
+                              color="green"
+                              onClick={() => handleReview(submission.id, 'approved')}
+                            >
+                              🎉 Approuver
+                            </Button>
+                            <Button
+                              variant="soft"
+                              onClick={() => handleReview(submission.id, 'pending')}
+                            >
+                              ↩ Remettre en attente
+                            </Button>
+                          </>
                         )}
                         <Button
                           variant="soft"
-                          onClick={() => handleReview(submission.id, submission.reviewed)}
+                          onClick={() => handleSaveNotes(submission.id, submission.status)}
                         >
-                          💾 Sauvegarder les notes
+                          💾 Sauvegarder le message
                         </Button>
                       </Flex>
                     </Box>
@@ -305,4 +362,3 @@ export function Admin() {
     </Container>
   );
 }
-

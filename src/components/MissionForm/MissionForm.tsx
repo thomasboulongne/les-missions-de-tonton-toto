@@ -1,9 +1,24 @@
-import { useState, useEffect } from 'react';
-import { Box, Button, Flex, Text, TextArea, TextField, Select, Heading } from '@radix-ui/themes';
-import { createMission, updateMission } from '../../lib/api';
-import { ImageUpload } from '../ImageUpload';
-import type { CreateMissionInput, Difficulty, Mission } from '../../types';
-import styles from './MissionForm.module.css';
+import { useState, useEffect, useCallback } from "react";
+import {
+  Box,
+  Button,
+  Flex,
+  Text,
+  TextArea,
+  TextField,
+  Select,
+  Heading,
+} from "@radix-ui/themes";
+import { createMission, updateMission } from "../../lib/api";
+import { ImageUpload } from "../ImageUpload";
+import type { CreateMissionInput, Difficulty, Mission } from "../../types";
+import styles from "./MissionForm.module.css";
+
+const difficulties: { value: Difficulty; label: string }[] = [
+  { value: "easy", label: "⭐ Facile" },
+  { value: "tricky", label: "⚡ Costaud" },
+  { value: "expert", label: "🚀 Expert" },
+];
 
 interface MissionFormProps {
   onSuccess?: () => void;
@@ -11,19 +26,23 @@ interface MissionFormProps {
   mission?: Mission | null;
 }
 
-export function MissionForm({ onSuccess, onCancel, mission }: MissionFormProps) {
+export function MissionForm({
+  onSuccess,
+  onCancel,
+  mission,
+}: MissionFormProps) {
   const isEditing = !!mission;
 
-  const [title, setTitle] = useState('');
-  const [story, setStory] = useState('');
-  const [objective, setObjective] = useState('');
-  const [constraintsText, setConstraintsText] = useState('');
-  const [criteriaText, setCriteriaText] = useState('');
-  const [difficulty, setDifficulty] = useState<Difficulty>('easy');
-  const [bannerImageUrl, setBannerImageUrl] = useState('');
-  const [setupImageUrl, setSetupImageUrl] = useState('');
-  const [hint1, setHint1] = useState('');
-  const [hint2, setHint2] = useState('');
+  const [title, setTitle] = useState("");
+  const [story, setStory] = useState("");
+  const [objective, setObjective] = useState("");
+  const [constraintsText, setConstraintsText] = useState("");
+  const [criteriaText, setCriteriaText] = useState("");
+  const [difficulty, setDifficulty] = useState<Difficulty>("easy");
+  const [bannerImageUrl, setBannerImageUrl] = useState("");
+  const [setupImageUrl, setSetupImageUrl] = useState("");
+  const [hint1, setHint1] = useState("");
+  const [hint2, setHint2] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -34,85 +53,115 @@ export function MissionForm({ onSuccess, onCancel, mission }: MissionFormProps) 
       setTitle(mission.title);
       setStory(mission.story);
       setObjective(mission.objective);
-      setConstraintsText(mission.constraints.join('\n'));
-      setCriteriaText(mission.success_criteria.join('\n'));
+      setConstraintsText(mission.constraints.join("\n"));
+      setCriteriaText(mission.success_criteria.join("\n"));
       setDifficulty(mission.difficulty);
-      setBannerImageUrl(mission.banner_image_url || '');
-      setSetupImageUrl(mission.setup_image_url || '');
-      setHint1(mission.hint1 || '');
-      setHint2(mission.hint2 || '');
+
+      console.log(mission.difficulty);
+      setBannerImageUrl(mission.banner_image_url || "");
+      setSetupImageUrl(mission.setup_image_url || "");
+      setHint1(mission.hint1 || "");
+      setHint2(mission.hint2 || "");
     }
   }, [mission]);
 
   const resetForm = () => {
-    setTitle('');
-    setStory('');
-    setObjective('');
-    setConstraintsText('');
-    setCriteriaText('');
-    setDifficulty('easy');
-    setBannerImageUrl('');
-    setSetupImageUrl('');
-    setHint1('');
-    setHint2('');
+    setTitle("");
+    setStory("");
+    setObjective("");
+    setConstraintsText("");
+    setCriteriaText("");
+    setDifficulty("easy");
+    setBannerImageUrl("");
+    setSetupImageUrl("");
+    setHint1("");
+    setHint2("");
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setIsSubmitting(true);
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setError(null);
+      setIsSubmitting(true);
 
-    try {
-      const constraints = constraintsText
-        .split('\n')
-        .map((c) => c.trim())
-        .filter((c) => c.length > 0);
+      try {
+        const constraints = constraintsText
+          .split("\n")
+          .map((c) => c.trim())
+          .filter((c) => c.length > 0);
 
-      const success_criteria = criteriaText
-        .split('\n')
-        .map((c) => c.trim())
-        .filter((c) => c.length > 0);
+        const success_criteria = criteriaText
+          .split("\n")
+          .map((c) => c.trim())
+          .filter((c) => c.length > 0);
 
-      const data: CreateMissionInput = {
-        title,
-        story,
-        objective,
-        constraints,
-        success_criteria,
-        difficulty,
-        banner_image_url: bannerImageUrl || undefined,
-        setup_image_url: setupImageUrl || undefined,
-        hint1: hint1 || undefined,
-        hint2: hint2 || undefined,
-      };
+        console.log(difficulty);
+        const data: CreateMissionInput = {
+          title,
+          story,
+          objective,
+          constraints,
+          success_criteria,
+          difficulty,
+          banner_image_url: bannerImageUrl || undefined,
+          setup_image_url: setupImageUrl || undefined,
+          hint1: hint1 || undefined,
+          hint2: hint2 || undefined,
+        };
 
-      if (isEditing) {
-        await updateMission(mission.id, data);
-      } else {
-        await createMission(data);
+        if (isEditing) {
+          await updateMission(mission.id, data);
+        } else {
+          await createMission(data);
+        }
+        setSuccess(true);
+
+        if (!isEditing) {
+          resetForm();
+        }
+
+        setTimeout(() => {
+          setSuccess(false);
+          onSuccess?.();
+        }, 2000);
+      } catch {
+        setError(
+          isEditing
+            ? "Erreur lors de la mise à jour de la mission"
+            : "Erreur lors de la création de la mission"
+        );
+      } finally {
+        setIsSubmitting(false);
       }
-      setSuccess(true);
-
-      if (!isEditing) {
-        resetForm();
-      }
-
-      setTimeout(() => {
-        setSuccess(false);
-        onSuccess?.();
-      }, 2000);
-    } catch (err) {
-      setError(isEditing ? 'Erreur lors de la mise à jour de la mission' : 'Erreur lors de la création de la mission');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+    },
+    [
+      isEditing,
+      mission,
+      title,
+      story,
+      objective,
+      constraintsText,
+      criteriaText,
+      difficulty,
+      bannerImageUrl,
+      setupImageUrl,
+      hint1,
+      hint2,
+      onSuccess,
+    ]
+  );
 
   return (
     <Box className={styles.container}>
       <Flex justify="between" align="center" mb="4">
-        <Heading size="5" className={styles.heading} style={{ marginBottom: 0 }}>
-          {isEditing ? `Modifier la mission #${mission.id}` : 'Nouvelle mission'}
+        <Heading
+          size="5"
+          className={styles.heading}
+          style={{ marginBottom: 0 }}
+        >
+          {isEditing
+            ? `Modifier la mission #${mission.id}`
+            : "Nouvelle mission"}
         </Heading>
         {isEditing && onCancel && (
           <Button variant="soft" color="gray" onClick={onCancel}>
@@ -123,7 +172,10 @@ export function MissionForm({ onSuccess, onCancel, mission }: MissionFormProps) 
 
       {success && (
         <Box className={styles.successMessage}>
-          ✅ {isEditing ? 'Mission mise à jour avec succès !' : 'Mission créée avec succès !'}
+          ✅{" "}
+          {isEditing
+            ? "Mission mise à jour avec succès !"
+            : "Mission créée avec succès !"}
         </Box>
       )}
 
@@ -194,18 +246,24 @@ export function MissionForm({ onSuccess, onCancel, mission }: MissionFormProps) 
 
           <Box>
             <Text as="label" size="2" weight="bold" className={styles.label}>
-              Difficulté
+              Difficulté {mission?.difficulty}
             </Text>
             <Select.Root
-              key={`difficulty-${mission?.id ?? 'new'}`}
+              key={`difficulty-${mission?.id ?? "new"}`}
               value={difficulty}
-              onValueChange={(v) => setDifficulty(v as Difficulty)}
+              onValueChange={(v) => {
+                if (v && difficulties.some((d) => d.value === v)) {
+                  setDifficulty(v as Difficulty);
+                }
+              }}
             >
               <Select.Trigger className={styles.select} />
               <Select.Content>
-                <Select.Item value="easy">⭐ Facile</Select.Item>
-                <Select.Item value="tricky">⚡ Costaud</Select.Item>
-                <Select.Item value="expert">🚀 Expert</Select.Item>
+                {difficulties.map((difficulty) => (
+                  <Select.Item key={difficulty.value} value={difficulty.value}>
+                    {difficulty.label}
+                  </Select.Item>
+                ))}
               </Select.Content>
             </Select.Root>
           </Box>
@@ -261,12 +319,15 @@ export function MissionForm({ onSuccess, onCancel, mission }: MissionFormProps) 
             className={styles.submitButton}
           >
             {isSubmitting
-              ? (isEditing ? 'Mise à jour...' : 'Création en cours...')
-              : (isEditing ? '💾 Enregistrer les modifications' : '🎯 Créer la mission')}
+              ? isEditing
+                ? "Mise à jour..."
+                : "Création en cours..."
+              : isEditing
+              ? "💾 Enregistrer les modifications"
+              : "🎯 Créer la mission"}
           </Button>
         </Flex>
       </form>
     </Box>
   );
 }
-

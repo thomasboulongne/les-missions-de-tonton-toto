@@ -4,8 +4,19 @@ import { Link } from 'react-router-dom';
 import { MissionCard } from '../components/MissionCard';
 import { DifficultyBadge } from '../components/DifficultyBadge';
 import { getAllMissions } from '../lib/api';
-import type { MissionWithSubmissions } from '../types';
+import type { MissionWithSubmissions, SubmissionStatus } from '../types';
 import styles from './Archives.module.css';
+
+function getStatusBadge(status: SubmissionStatus) {
+  switch (status) {
+    case 'approved':
+      return <Badge color="green" size="1">🎉 Validé</Badge>;
+    case 'needs_work':
+      return <Badge color="orange" size="1">💪 À retravailler</Badge>;
+    default:
+      return <Badge color="gray" size="1">⏳ En attente</Badge>;
+  }
+}
 
 export function Archives() {
   const [missions, setMissions] = useState<MissionWithSubmissions[]>([]);
@@ -48,6 +59,10 @@ export function Archives() {
     );
   }
 
+  // Check if any submission in a mission is approved
+  const hasApprovedSubmission = (submissions: MissionWithSubmissions['submissions']) =>
+    submissions.some(s => s.status === 'approved');
+
   return (
     <Container size="3" className={styles.container}>
       <Link to="/" className={styles.backLink}>
@@ -71,7 +86,7 @@ export function Archives() {
           {missions.map((mission) => (
             <Card
               key={mission.id}
-              className={`${styles.missionItem} ${mission.submissions.length > 0 ? styles.completed : ''}`}
+              className={`${styles.missionItem} ${hasApprovedSubmission(mission.submissions) ? styles.completed : ''}`}
               onClick={() => setExpandedMission(expandedMission === mission.id ? null : mission.id)}
             >
               <Flex justify="between" align="start" gap="3">
@@ -80,9 +95,11 @@ export function Archives() {
                     <Text size="1" color="gray">
                       #{mission.id}
                     </Text>
-                    {mission.submissions.length > 0 && (
-                      <Badge color="green" size="1">✓ Soumis</Badge>
-                    )}
+                    {hasApprovedSubmission(mission.submissions) ? (
+                      <Badge color="green" size="1">🎉 Réussi</Badge>
+                    ) : mission.submissions.length > 0 ? (
+                      <Badge color="blue" size="1">📝 Soumis</Badge>
+                    ) : null}
                   </Flex>
                   <Heading size="4" className={styles.missionTitle}>
                     {mission.title}
@@ -107,7 +124,7 @@ export function Archives() {
                   {mission.submissions.length > 0 && (
                     <Box className={styles.submissionsSection}>
                       <Heading size="3" className={styles.submissionsTitle}>
-                        📝 Soumissions
+                        📝 Mes soumissions
                       </Heading>
                       {mission.submissions.map((submission) => (
                         <Card key={submission.id} className={styles.submissionCard}>
@@ -121,9 +138,7 @@ export function Archives() {
                                 minute: '2-digit',
                               })}
                             </Text>
-                            <Badge color={submission.reviewed ? 'green' : 'orange'} size="1">
-                              {submission.reviewed ? '✓ Vérifié' : '⏳ En attente'}
-                            </Badge>
+                            {getStatusBadge(submission.status)}
                           </Flex>
 
                           <Text as="p" size="2" className={styles.submissionText}>
@@ -155,7 +170,7 @@ export function Archives() {
                           {submission.review_notes && (
                             <Box className={styles.reviewNotes}>
                               <Text size="2">
-                                <strong>Notes de Tonton Toto :</strong> {submission.review_notes}
+                                <strong>🤖 Message de Tonton Toto :</strong> {submission.review_notes}
                               </Text>
                             </Box>
                           )}
@@ -176,4 +191,3 @@ export function Archives() {
     </Container>
   );
 }
-

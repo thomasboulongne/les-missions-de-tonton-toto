@@ -42,6 +42,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2,otf}"],
+        // Import custom service worker for push notifications
+        importScripts: ["custom-sw.js"],
       },
     }),
   ],

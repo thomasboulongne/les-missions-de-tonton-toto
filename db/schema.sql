@@ -28,11 +28,27 @@ CREATE TABLE IF NOT EXISTS submissions (
   media_url_2 TEXT,
   submitted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   reviewed BOOLEAN DEFAULT FALSE,
-  review_notes TEXT
+  review_notes TEXT,
+  status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'needs_work')),
+  reviewed_at TIMESTAMP WITH TIME ZONE
+);
+
+-- push_subscriptions table for web push notifications
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  id SERIAL PRIMARY KEY,
+  endpoint TEXT UNIQUE NOT NULL,
+  p256dh TEXT NOT NULL,
+  auth TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Migration: Add media_url_2 column if it doesn't exist
 -- ALTER TABLE submissions ADD COLUMN IF NOT EXISTS media_url_2 TEXT;
+
+-- Migration: Add status and reviewed_at columns for feedback flow
+-- ALTER TABLE submissions ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'needs_work'));
+-- ALTER TABLE submissions ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMP WITH TIME ZONE;
+-- UPDATE submissions SET status = 'approved' WHERE reviewed = true AND status IS NULL;
 
 -- Index for faster lookups
 CREATE INDEX IF NOT EXISTS idx_submissions_mission_id ON submissions(mission_id);

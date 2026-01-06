@@ -58,13 +58,18 @@
 }
 
 .submissionCard.pending {
-  border-color: var(--orange-6);
-  background: var(--orange-2);
+  border-color: var(--gray-6);
+  background: var(--gray-2);
 }
 
-.submissionCard.reviewed {
+.submissionCard.approved {
   border-color: var(--green-6);
   background: var(--green-2);
+}
+
+.submissionCard.needsWork {
+  border-color: var(--orange-6);
+  background: var(--orange-2);
 }
 
 .submissionTitle {

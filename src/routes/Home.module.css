@@ -71,6 +71,27 @@
   padding: 0.75rem 1.5rem;
 }
 
+.pushPrompt {
+  background: var(--accent-2);
+  border: 1px solid var(--accent-6);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (max-width: 640px) {
   .container {
     padding: 1rem;

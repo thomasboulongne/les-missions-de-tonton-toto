@@ -2,6 +2,7 @@ import type {
   Mission,
   MissionWithSubmissions,
   Submission,
+  SubmissionWithMission,
   CreateMissionInput,
   CreateSubmissionInput,
   ReviewSubmissionInput,
@@ -87,6 +88,12 @@ export async function reviewSubmission(id: number, data: ReviewSubmissionInput):
     body: JSON.stringify({ id, ...data }),
   });
   if (!res.ok) throw new Error('Failed to review submission');
+  return res.json();
+}
+
+export async function getUnreadReviews(since: string): Promise<SubmissionWithMission[]> {
+  const res = await fetch(`${API_BASE}/submissions?reviewed_since=${encodeURIComponent(since)}`);
+  if (!res.ok) throw new Error('Failed to fetch unread reviews');
   return res.json();
 }
 

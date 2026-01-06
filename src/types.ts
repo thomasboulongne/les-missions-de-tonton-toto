@@ -1,5 +1,7 @@
 export type Difficulty = 'easy' | 'tricky' | 'expert';
 
+export type SubmissionStatus = 'pending' | 'approved' | 'needs_work';
+
 export interface Mission {
   id: number;
   title: string;
@@ -26,6 +28,12 @@ export interface Submission {
   submitted_at: string;
   reviewed: boolean;
   review_notes: string | null;
+  status: SubmissionStatus;
+  reviewed_at: string | null;
+}
+
+export interface SubmissionWithMission extends Submission {
+  mission_title: string;
 }
 
 export interface MissionWithSubmissions extends Mission {
@@ -55,7 +63,6 @@ export interface CreateSubmissionInput {
 }
 
 export interface ReviewSubmissionInput {
-  reviewed: boolean;
+  status: SubmissionStatus;
   review_notes?: string;
 }
-
