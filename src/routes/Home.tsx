@@ -26,7 +26,9 @@ export function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [unreadReviews, setUnreadReviews] = useState<SubmissionWithMission[]>([]);
+  const [unreadReviews, setUnreadReviews] = useState<SubmissionWithMission[]>(
+    []
+  );
   const [showPushPrompt, setShowPushPrompt] = useState(false);
 
   const subtitleRef = useRef<HTMLSpanElement>(null);
@@ -80,11 +82,11 @@ export function Home() {
     try {
       const lastSeen = getLastSeenReviewTime();
       // If never seen, use a date far in the past
-      const since = lastSeen || '1970-01-01T00:00:00.000Z';
+      const since = lastSeen || "1970-01-01T00:00:00.000Z";
       const reviews = await getUnreadReviews(since);
       setUnreadReviews(reviews);
     } catch (err) {
-      console.error('Error checking unread reviews:', err);
+      console.error("Error checking unread reviews:", err);
     }
   }, []);
 
@@ -119,7 +121,7 @@ export function Home() {
     // - Permission is 'default' (not yet asked)
     // - We haven't prompted before
     // - Mission is loaded (don't interrupt loading)
-    if (permission === 'default' && !alreadyAsked && showMission) {
+    if (permission === "default" && !alreadyAsked && showMission) {
       // Delay the prompt a bit so it doesn't appear immediately
       const timer = setTimeout(() => {
         setShowPushPrompt(true);
@@ -163,8 +165,8 @@ export function Home() {
   // Show loading when: fetching data OR FSM is awaiting/animating loading
   const shouldShowLoading = loading || isAwaitingLoading || isAnimatingLoading;
 
-  // Show mission when FSM allows
-  const shouldShowMission = showMission && mission;
+  // Render mission content early (hidden) so elements register before animation
+  const shouldRenderMission = isHeaderComplete && mission;
 
   // Show the most recent unread review
   const latestUnreadReview = unreadReviews.length > 0 ? unreadReviews[0] : null;
@@ -232,8 +234,9 @@ export function Home() {
           </>
         )}
 
-        {/* Mission content */}
-        {shouldShowMission && (
+        {/* Mission content - render early so elements register before animation
+            Elements start with opacity: 0 in CSS, animation will reveal them */}
+        {shouldRenderMission && (
           <>
             <Text ref={subtitleRef} className={styles.subtitle}>
               Mission en cours
@@ -241,35 +244,40 @@ export function Home() {
 
             <MissionCard mission={mission} />
 
-            <HintsSection
-              missionId={mission.id}
-              hint1={mission.hint1}
-              hint2={mission.hint2}
-            />
+            {/* Only show interactive elements after animation completes */}
+            {showMission && (
+              <>
+                <HintsSection
+                  missionId={mission.id}
+                  hint1={mission.hint1}
+                  hint2={mission.hint2}
+                />
 
-            <Flex gap="3" className={styles.actions} justify={"center"}>
-              <Button
-                size="4"
-                className={styles.submitButton}
-                onClick={() => setDialogOpen(true)}
-              >
-                🎉 J'ai terminé ma mission !
-              </Button>
+                <Flex gap="3" className={styles.actions} justify={"center"}>
+                  <Button
+                    size="4"
+                    className={styles.submitButton}
+                    onClick={() => setDialogOpen(true)}
+                  >
+                    🎉 J'ai terminé ma mission !
+                  </Button>
 
-              <Link to="/missions">
-                <Button size="4" variant="soft">
-                  📚 Archives
-                </Button>
-              </Link>
-            </Flex>
+                  <Link to="/missions">
+                    <Button size="4" variant="soft">
+                      📚 Archives
+                    </Button>
+                  </Link>
+                </Flex>
 
-            <SubmissionDialog
-              missionId={mission.id}
-              missionTitle={mission.title}
-              open={dialogOpen}
-              onOpenChange={setDialogOpen}
-              onSuccess={fetchMission}
-            />
+                <SubmissionDialog
+                  missionId={mission.id}
+                  missionTitle={mission.title}
+                  open={dialogOpen}
+                  onOpenChange={setDialogOpen}
+                  onSuccess={fetchMission}
+                />
+              </>
+            )}
           </>
         )}
       </Container>
