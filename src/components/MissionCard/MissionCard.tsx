@@ -44,7 +44,6 @@ export function MissionCard({ mission, compact = false }: MissionCardProps) {
             className={styles.banner}
             sizes={compact ? "(max-width: 768px) 100vw, 400px" : "100vw"}
             widths={compact ? [320, 400, 640] : [640, 768, 1024, 1280, 1536]}
-            quality={85}
           />
         </Inset>
       )}
@@ -71,7 +70,6 @@ export function MissionCard({ mission, compact = false }: MissionCardProps) {
                   className={styles.setupImage}
                   sizes="(max-width: 768px) 100vw, 800px"
                   widths={[320, 640, 800, 1024]}
-                  quality={85}
                 />
               </Box>
             )}

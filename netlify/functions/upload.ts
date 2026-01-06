@@ -1,10 +1,15 @@
 import { getStore } from "@netlify/blobs";
+import sharp from "sharp";
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB for images
 const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100MB for videos
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime", "video/x-m4v"];
 const ALLOWED_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_VIDEO_TYPES];
+
+// Upload optimization settings
+const MAX_DIMENSION = 2000; // Max width/height for stored images
+const UPLOAD_QUALITY = 85; // Quality for stored images
 
 export default async (req: Request) => {
   // CORS headers
@@ -61,26 +66,51 @@ export default async (req: Request) => {
       );
     }
 
-    // Generate unique key for the file
-    const ext = file.name.split(".").pop() || "jpg";
-    const timestamp = Date.now();
-    const randomId = Math.random().toString(36).substring(2, 10);
-    const key = `uploads/${timestamp}-${randomId}.${ext}`;
-
     // Get the blob store with site-scoped configuration
     const store = getStore({
       name: "images",
       siteID: process.env.SITE_ID,
-      //   token:
-      //     process.env.BLOB_READ_WRITE_TOKEN ||
-      //     Netlify.env.get("BLOB_READ_WRITE_TOKEN"),
     });
 
-    // Convert file to ArrayBuffer and store
+    // Convert file to ArrayBuffer
     const arrayBuffer = await file.arrayBuffer();
-    await store.set(key, arrayBuffer, {
+    const isImage = ALLOWED_IMAGE_TYPES.includes(file.type);
+
+    let finalBuffer: ArrayBuffer;
+    let finalContentType: string;
+    let finalExt: string;
+
+    if (isImage && file.type !== "image/gif") {
+      // Optimize images on upload (except GIFs to preserve animation)
+      const optimized = await sharp(Buffer.from(arrayBuffer))
+        .resize(MAX_DIMENSION, MAX_DIMENSION, {
+          fit: "inside",
+          withoutEnlargement: true,
+        })
+        .webp({ quality: UPLOAD_QUALITY })
+        .toBuffer();
+
+      finalBuffer = optimized.buffer.slice(
+        optimized.byteOffset,
+        optimized.byteOffset + optimized.byteLength
+      ) as ArrayBuffer;
+      finalContentType = "image/webp";
+      finalExt = "webp";
+    } else {
+      // Store videos and GIFs as-is
+      finalBuffer = arrayBuffer;
+      finalContentType = file.type;
+      finalExt = file.name.split(".").pop() || (isVideo ? "mp4" : "jpg");
+    }
+
+    // Generate unique key for the file
+    const timestamp = Date.now();
+    const randomId = Math.random().toString(36).substring(2, 10);
+    const key = `uploads/${timestamp}-${randomId}.${finalExt}`;
+
+    await store.set(key, finalBuffer, {
       metadata: {
-        contentType: file.type,
+        contentType: finalContentType,
         originalName: file.name,
       },
     });

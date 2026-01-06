@@ -112,6 +112,16 @@ function needsTransformation(options: TransformOptions): boolean {
 }
 
 export default async (req: Request) => {
+  const startTime = performance.now();
+  const requestId = Math.random().toString(36).substring(2, 8);
+  const log = (message: string, data?: Record<string, unknown>) => {
+    const elapsed = (performance.now() - startTime).toFixed(1);
+    console.log(
+      `[${requestId}] [${elapsed}ms] ${message}`,
+      data ? JSON.stringify(data) : ""
+    );
+  };
+
   const url = new URL(req.url);
 
   // Extract the key from the path: /images/uploads/timestamp-id.ext
@@ -119,12 +129,28 @@ export default async (req: Request) => {
   const keyIndex = pathParts.indexOf("images") + 1;
   const key = pathParts.slice(keyIndex).join("/");
 
+  log("📥 Request received", {
+    key,
+    query: url.search,
+    userAgent: req.headers.get("User-Agent")?.substring(0, 50),
+  });
+
   if (!key) {
+    log("❌ No key found, returning 404");
     return new Response("Not found", { status: 404 });
   }
 
   const acceptHeader = req.headers.get("Accept");
   const options = parseTransformOptions(url, acceptHeader);
+
+  log("⚙️ Parsed options", {
+    width: options.width,
+    height: options.height,
+    quality: options.quality,
+    format: options.format,
+    fit: options.fit,
+    needsTransform: needsTransformation(options),
+  });
 
   try {
     // Get blob stores
@@ -141,17 +167,26 @@ export default async (req: Request) => {
     // If transformation is needed, check cache FIRST (before fetching original)
     if (needsTransformation(options)) {
       const cacheKey = generateCacheKey(key, options);
+      log("🔍 Checking cache", { cacheKey });
 
       try {
+        const cacheStart = performance.now();
         const { data: cachedData, metadata: cachedMetadata } =
           await cacheStore.getWithMetadata(cacheKey, {
             type: "arrayBuffer",
           });
+        const cacheDuration = (performance.now() - cacheStart).toFixed(1);
 
         if (cachedData) {
           const cachedContentType =
             (cachedMetadata as { contentType?: string })?.contentType ||
             "image/jpeg";
+
+          log("✅ Cache HIT", {
+            cacheLookupMs: cacheDuration,
+            size: (cachedData as ArrayBuffer).byteLength,
+            contentType: cachedContentType,
+          });
 
           return new Response(cachedData, {
             status: 200,
@@ -163,28 +198,40 @@ export default async (req: Request) => {
             },
           });
         }
-      } catch {
-        // Cache miss or error, continue to fetch and transform
+        log("⚡ Cache MISS", { cacheLookupMs: cacheDuration });
+      } catch (cacheError) {
+        log("⚠️ Cache lookup error", { error: String(cacheError) });
       }
     }
 
     // Only fetch original if cache miss or no transformation needed
+    log("📦 Fetching original from blob store");
+    const fetchStart = performance.now();
     const { data: originalData, metadata } = await imageStore.getWithMetadata(
       key,
       {
         type: "arrayBuffer",
       }
     );
+    const fetchDuration = (performance.now() - fetchStart).toFixed(1);
 
     if (!originalData) {
+      log("❌ Original not found in blob store");
       return new Response("Not found", { status: 404 });
     }
 
     const contentType =
       (metadata as { contentType?: string })?.contentType || "image/jpeg";
 
+    log("📦 Original fetched", {
+      fetchMs: fetchDuration,
+      size: (originalData as ArrayBuffer).byteLength,
+      contentType,
+    });
+
     // If not a transformable image type (e.g., video), serve directly
     if (!TRANSFORMABLE_TYPES.includes(contentType)) {
+      log("🎬 Non-transformable type, serving directly", { contentType });
       return new Response(originalData, {
         status: 200,
         headers: {
@@ -197,6 +244,7 @@ export default async (req: Request) => {
 
     // If no transformation needed, serve original
     if (!needsTransformation(options)) {
+      log("📤 No transformation needed, serving original");
       return new Response(originalData, {
         status: 200,
         headers: {
@@ -211,6 +259,8 @@ export default async (req: Request) => {
     const cacheKey = generateCacheKey(key, options);
 
     // Transform the image
+    log("🔄 Starting transformation");
+    const transformStart = performance.now();
     let transformer = sharp(Buffer.from(originalData));
 
     // Resize if dimensions specified
@@ -246,6 +296,20 @@ export default async (req: Request) => {
     }
 
     const transformedBuffer = await transformer.toBuffer();
+    const transformDuration = (performance.now() - transformStart).toFixed(1);
+
+    log("✨ Transformation complete", {
+      transformMs: transformDuration,
+      originalSize: (originalData as ArrayBuffer).byteLength,
+      transformedSize: transformedBuffer.byteLength,
+      reduction: `${(
+        100 -
+        (transformedBuffer.byteLength /
+          (originalData as ArrayBuffer).byteLength) *
+          100
+      ).toFixed(1)}%`,
+      outputFormat,
+    });
 
     // Cache the transformed image (async, don't wait)
     // Convert Buffer to ArrayBuffer for Response and blob store compatibility
@@ -253,11 +317,21 @@ export default async (req: Request) => {
       transformedBuffer.byteOffset,
       transformedBuffer.byteOffset + transformedBuffer.byteLength
     ) as ArrayBuffer;
+
+    log("💾 Caching transformed image", { cacheKey });
     cacheStore
       .set(cacheKey, transformedArrayBuffer, {
         metadata: { contentType: outputContentType },
       })
-      .catch((err) => console.error("Failed to cache transformed image:", err));
+      .then(() => log("💾 Cache write successful"))
+      .catch((err) => log("❌ Cache write failed", { error: String(err) }));
+
+    const totalDuration = (performance.now() - startTime).toFixed(1);
+    log("📤 Sending response", {
+      totalMs: totalDuration,
+      size: transformedArrayBuffer.byteLength,
+      contentType: outputContentType,
+    });
 
     return new Response(transformedArrayBuffer, {
       status: 200,
@@ -269,7 +343,10 @@ export default async (req: Request) => {
       },
     });
   } catch (error) {
-    console.error("Error serving image:", error);
+    log("❌ Error serving image", {
+      error: String(error),
+      stack: (error as Error).stack,
+    });
     return new Response("Not found", { status: 404 });
   }
 };

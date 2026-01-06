@@ -85,8 +85,8 @@ export function OptimizedImage({
   alt,
   widths = DEFAULT_WIDTHS,
   sizes,
-  quality = 80,
-  format,
+  quality = 75,
+  format = 'webp', // Default to WebP for consistent caching and smaller files
   fit,
   loading = 'lazy',
   decoding = 'async',
