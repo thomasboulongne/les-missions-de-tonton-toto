@@ -66,7 +66,7 @@ export function Home() {
     if (subtitleRef.current) {
       register("subtitle", subtitleRef.current);
     }
-  }, [register, mission, showMission]);
+  }, [register, mission]);
 
   // Notify FSM when mission content elements are ready
   useEffect(() => {
