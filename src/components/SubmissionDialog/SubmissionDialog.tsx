@@ -1,7 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, Button, Flex, Text, TextArea, TextField, Box } from '@radix-ui/themes';
 import { createSubmission } from '../../lib/api';
 import { MediaUpload } from '../MediaUpload';
+import {
+  isPushSupported,
+  getNotificationPermission,
+  subscribeToPush,
+  hasPushPermissionBeenAsked,
+  markPushPermissionAsked,
+} from '../../lib/pushNotifications';
 import styles from './SubmissionDialog.module.css';
 
 interface SubmissionDialogProps {
@@ -27,6 +34,60 @@ export function SubmissionDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [showPushPrompt, setShowPushPrompt] = useState(false);
+  const [pushHandled, setPushHandled] = useState(false);
+
+  // Check if we should show push prompt when submission succeeds
+  useEffect(() => {
+    if (success && !pushHandled) {
+      // Check if we should ask for push notifications
+      if (isPushSupported()) {
+        const permission = getNotificationPermission();
+        const alreadyAsked = hasPushPermissionBeenAsked();
+
+        if (permission === 'default' && !alreadyAsked) {
+          setShowPushPrompt(true);
+          return; // Don't auto-close, wait for push prompt interaction
+        }
+      }
+
+      // No push prompt needed, auto-close after delay
+      const timer = setTimeout(() => {
+        closeAndReset();
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [success, pushHandled]);
+
+  const closeAndReset = () => {
+    onOpenChange(false);
+    setSuccess(false);
+    setShowPushPrompt(false);
+    setPushHandled(false);
+    setWhatHappened('');
+    setWhatWasHard('');
+    setLinkUrl('');
+    setMediaUrl('');
+    setMediaUrl2('');
+    onSuccess?.();
+  };
+
+  const handleEnablePush = async () => {
+    markPushPermissionAsked();
+    setPushHandled(true);
+    setShowPushPrompt(false);
+    await subscribeToPush();
+    // Close after enabling
+    setTimeout(closeAndReset, 1500);
+  };
+
+  const handleDismissPush = () => {
+    markPushPermissionAsked();
+    setPushHandled(true);
+    setShowPushPrompt(false);
+    // Close after dismissing
+    setTimeout(closeAndReset, 1500);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,16 +104,6 @@ export function SubmissionDialog({
         media_url_2: mediaUrl2 || undefined,
       });
       setSuccess(true);
-      setTimeout(() => {
-        onOpenChange(false);
-        setSuccess(false);
-        setWhatHappened('');
-        setWhatWasHard('');
-        setLinkUrl('');
-        setMediaUrl('');
-        setMediaUrl2('');
-        onSuccess?.();
-      }, 2000);
     } catch (err) {
       setError('Oups ! Une erreur est survenue. Réessaie !');
     } finally {
@@ -68,6 +119,8 @@ export function SubmissionDialog({
     setMediaUrl2('');
     setError(null);
     setSuccess(false);
+    setShowPushPrompt(false);
+    setPushHandled(false);
   };
 
   return (
@@ -87,6 +140,22 @@ export function SubmissionDialog({
           <Box className={styles.successMessage}>
             <Text size="5">🎊 Bravo !</Text>
             <Text>Ta soumission a été envoyée à Tonton Toto !</Text>
+
+            {showPushPrompt && (
+              <Box className={styles.pushPrompt}>
+                <Text size="2" className={styles.pushText}>
+                  🔔 Tu veux être prévenu quand Tonton Toto te répond ?
+                </Text>
+                <Flex gap="2" mt="3" justify="center">
+                  <Button size="2" onClick={handleEnablePush}>
+                    Oui !
+                  </Button>
+                  <Button size="2" variant="soft" color="gray" onClick={handleDismissPush}>
+                    Plus tard
+                  </Button>
+                </Flex>
+              </Box>
+            )}
           </Box>
         ) : (
           <form onSubmit={handleSubmit}>

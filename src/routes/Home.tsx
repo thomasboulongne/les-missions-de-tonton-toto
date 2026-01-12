@@ -8,13 +8,8 @@ import { FeedbackCard } from "../components/FeedbackCard";
 import { Header } from "../components/Header";
 import { getCurrentMission, getUnreadReviews } from "../lib/api";
 import {
-  isPushSupported,
-  getNotificationPermission,
-  subscribeToPush,
   getLastSeenReviewTime,
   markReviewsAsSeen,
-  hasPushPermissionBeenAsked,
-  markPushPermissionAsked,
 } from "../lib/pushNotifications";
 import { useAnimationStateMachine } from "../hooks/useAnimationStateMachine";
 import { useAnimationStore } from "../stores/animationStore";
@@ -29,22 +24,16 @@ export function Home() {
   const [unreadReviews, setUnreadReviews] = useState<SubmissionWithMission[]>(
     []
   );
-  const [showPushPrompt, setShowPushPrompt] = useState(false);
 
   const subtitleRef = useRef<HTMLSpanElement>(null);
   const loadingRef = useRef<HTMLDivElement>(null);
+  const noMissionRef = useRef<HTMLDivElement>(null);
   const register = useAnimationStore((state) => state.register);
   const elements = useAnimationStore((state) => state.elements);
 
   // Use the FSM for animation orchestration
-  const {
-    send,
-    onMissionLoaded,
-    onLoadingElementReady,
-    onMissionContentReady,
-    isAwaitingLoading,
-    isAnimatingLoading,
-  } = useAnimationStateMachine();
+  const { send, onMissionLoaded, onLoadingComplete, isAnimatingLoading } =
+    useAnimationStateMachine();
 
   // Start header animation when header elements are ready
   useEffect(() => {
@@ -53,27 +42,26 @@ export function Home() {
     }
   }, [elements.svgBanner, elements.heading, send]);
 
-  // Register and notify FSM when loading element is ready
+  // Register loading element when it renders
   useEffect(() => {
     if (loadingRef.current) {
       register("loadingState", loadingRef.current);
-      onLoadingElementReady();
     }
-  }, [register, onLoadingElementReady]);
+  }, [register, loading, isAnimatingLoading]);
 
-  // Register subtitle when it renders
+  // Register noMission element when it renders
   useEffect(() => {
-    if (subtitleRef.current) {
+    if (noMissionRef.current) {
+      register("noMissionState", noMissionRef.current);
+    }
+  }, [register, loading, mission]);
+
+  // Register subtitle when it renders (for mission state)
+  useEffect(() => {
+    if (subtitleRef.current && mission) {
       register("subtitle", subtitleRef.current);
     }
   }, [register, mission]);
-
-  // Notify FSM when mission content elements are ready
-  useEffect(() => {
-    if (elements.subtitle && elements.missionCard) {
-      onMissionContentReady();
-    }
-  }, [elements.subtitle, elements.missionCard, onMissionContentReady]);
 
   // Check for unread reviews
   const checkUnreadReviews = useCallback(async () => {
@@ -93,6 +81,8 @@ export function Home() {
       setLoading(true);
       const data = await getCurrentMission();
       setMission(data);
+
+      // Notify FSM when loading completes
       if (data) {
         onMissionLoaded();
       }
@@ -103,45 +93,21 @@ export function Home() {
     }
   }, [onMissionLoaded]);
 
+  // Notify FSM when loading completes (whether with mission or not)
+  useEffect(() => {
+    if (!loading) {
+      onLoadingComplete(Boolean(mission));
+    }
+  }, [loading, mission, onLoadingComplete]);
+
   useEffect(() => {
     fetchMission();
     checkUnreadReviews();
   }, [fetchMission, checkUnreadReviews]);
 
-  // Check if we should show push notification prompt
-  useEffect(() => {
-    if (!isPushSupported()) return;
-
-    const permission = getNotificationPermission();
-    const alreadyAsked = hasPushPermissionBeenAsked();
-
-    // Show prompt if:
-    // - Permission is 'default' (not yet asked)
-    // - We haven't prompted before
-    // - Mission is loaded (don't interrupt loading)
-    if (permission === "default" && !alreadyAsked) {
-      // Delay the prompt a bit so it doesn't appear immediately
-      const timer = setTimeout(() => {
-        setShowPushPrompt(true);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, []);
-
   const handleDismissFeedback = () => {
     markReviewsAsSeen();
     setUnreadReviews([]);
-  };
-
-  const handleEnablePush = async () => {
-    markPushPermissionAsked();
-    setShowPushPrompt(false);
-    await subscribeToPush();
-  };
-
-  const handleDismissPushPrompt = () => {
-    markPushPermissionAsked();
-    setShowPushPrompt(false);
   };
 
   // Error state (no animation)
@@ -160,81 +126,57 @@ export function Home() {
     );
   }
 
-  // Show loading when: fetching data OR FSM is awaiting/animating loading
-  const shouldShowLoading = loading || isAwaitingLoading || isAnimatingLoading;
-
-  // Render mission content early (hidden) so elements register before animation
-  const shouldRenderMission = Boolean(mission);
-
   // Show the most recent unread review
   const latestUnreadReview = unreadReviews.length > 0 ? unreadReviews[0] : null;
+
+  // Conditional rendering: only one content type at a time
+  const showLoading = loading || isAnimatingLoading;
+  const showNoMission = !loading && !mission;
+  const showMission = !loading && Boolean(mission);
 
   return (
     <div className={styles.page}>
       <Header />
       <Container size="3" className={styles.container}>
         {/* Feedback card for unread reviews */}
-        {latestUnreadReview && !shouldShowLoading && (
+        {latestUnreadReview && !showLoading && (
           <FeedbackCard
             submission={latestUnreadReview}
             onDismiss={handleDismissFeedback}
           />
         )}
 
-        {/* Push notification prompt */}
-        {showPushPrompt && (
-          <Box className={styles.pushPrompt}>
-            <Text size="2">
-              🔔 Recevoir une notification quand Tonton Toto répond ?
-            </Text>
-            <Flex gap="2" mt="2">
-              <Button size="1" onClick={handleEnablePush}>
-                Oui !
-              </Button>
-              <Button size="1" variant="soft" onClick={handleDismissPushPrompt}>
-                Plus tard
-              </Button>
-            </Flex>
-          </Box>
-        )}
-
         {/* Loading state */}
-        {shouldShowLoading && (
+        {showLoading && (
           <Box ref={loadingRef} className={styles.loading}>
             <Text size="5">🤖 Chargement de ta mission...</Text>
           </Box>
         )}
 
         {/* Empty state */}
-        {!loading && !mission && (
-          <>
-            <Text ref={subtitleRef} className={styles.subtitle}>
-              Toutes les missions terminées
-            </Text>
-            <Box className={styles.noMission}>
-              <Box className={styles.emptyState}>
-                <Text size="5">🎉 Bravo !</Text>
-                <Text size="3">
-                  Tu as terminé toutes les missions disponibles. Reviens bientôt
-                  pour de nouvelles aventures !
-                </Text>
-                <Link to="/missions">
-                  <Button
-                    size="3"
-                    variant="soft"
-                    className={styles.archiveButton}
-                  >
-                    📚 Voir les archives
-                  </Button>
-                </Link>
-              </Box>
+        {showNoMission && (
+          <Box ref={noMissionRef} className={styles.noMission}>
+            <Box className={styles.emptyState}>
+              <Text size="5">🎉 Bravo !</Text>
+              <Text size="3">
+                Tu as terminé toutes les missions disponibles. Reviens bientôt
+                pour de nouvelles aventures !
+              </Text>
+              <Link to="/missions">
+                <Button
+                  size="3"
+                  variant="soft"
+                  className={styles.archiveButton}
+                >
+                  📚 Voir les archives
+                </Button>
+              </Link>
             </Box>
-          </>
+          </Box>
         )}
 
-        {/* Mission content - render early so elements register before animation
-            Elements start with opacity: 0 in CSS, animation will reveal them */}
-        {shouldRenderMission && mission && (
+        {/* Mission content */}
+        {showMission && mission && (
           <>
             <Text ref={subtitleRef} className={styles.subtitle}>
               Mission en cours

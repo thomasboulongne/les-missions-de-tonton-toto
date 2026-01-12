@@ -12,11 +12,13 @@ import type {
  * Animation State Machine
  *
  * States flow:
- * idle → animatingHeader → waitingForContent
- *   → awaitingLoadingElement → animatingLoading → transitioningToMission → complete
- *   → awaitingMissionElements → animatingMission → complete
+ * idle → animatingHeader → decidingContent
+ *   → animatingLoading → (animatingMission | animatingNoMission) → complete
+ *   → animatingNoMission → complete
+ *   → animatingMission → complete
  *
- * Element registration triggers state transitions (no polling needed)
+ * Content always renders hidden (opacity: 0). After header completes,
+ * we check what content is present and animate it in.
  */
 const animationMachineDefinition = {
   initial: "idle" as const,
@@ -28,29 +30,27 @@ const animationMachineDefinition = {
     },
     animatingHeader: {
       on: {
-        HEADER_COMPLETE: "waitingForContent",
+        HEADER_COMPLETE: "decidingContent",
         MISSION_LOADED: "animatingHeader", // Stay, just track that mission loaded
+        LOADING_COMPLETE: "animatingHeader", // Stay, just track loading state
       },
     },
-    waitingForContent: {
+    decidingContent: {
       on: {
-        SHOW_LOADING: "awaitingLoadingElement",
-        SHOW_MISSION: "awaitingMissionElements",
-      },
-    },
-    awaitingLoadingElement: {
-      on: {
-        LOADING_READY: "animatingLoading",
+        SHOW_LOADING: "animatingLoading",
+        SHOW_NO_MISSION: "animatingNoMission",
+        SHOW_MISSION: "animatingMission",
       },
     },
     animatingLoading: {
       on: {
-        MISSION_LOADED: "transitioningToMission",
+        MISSION_LOADED: "animatingMission",
+        LOADING_COMPLETE_NO_MISSION: "animatingNoMission",
       },
     },
-    awaitingMissionElements: {
+    animatingNoMission: {
       on: {
-        MISSION_CONTENT_READY: "animatingMission",
+        ANIMATION_COMPLETE: "complete",
       },
     },
     animatingMission: {
@@ -58,21 +58,24 @@ const animationMachineDefinition = {
         ANIMATION_COMPLETE: "complete",
       },
     },
-    transitioningToMission: {
-      on: {
-        TRANSITION_COMPLETE: "complete",
-      },
-    },
     complete: {},
   },
 };
+
+interface ContentState {
+  isLoading: boolean;
+  hasMission: boolean;
+}
 
 export function useAnimationStateMachine() {
   const reset = useAnimationStore((state) => state.reset);
 
   const headerTimelineRef = useRef<gsap.core.Timeline | null>(null);
   const contentTimelineRef = useRef<gsap.core.Timeline | null>(null);
-  const missionLoadedRef = useRef(false);
+  const contentStateRef = useRef<ContentState>({
+    isLoading: true,
+    hasMission: false,
+  });
 
   const [state, send] = useStateMachine(animationMachineDefinition);
 
@@ -84,17 +87,28 @@ export function useAnimationStateMachine() {
 
   // Callbacks for external triggers
   const onMissionLoaded = useCallback(() => {
-    missionLoadedRef.current = true;
+    contentStateRef.current.hasMission = true;
+    contentStateRef.current.isLoading = false;
     send("MISSION_LOADED");
   }, [send]);
 
-  const onLoadingElementReady = useCallback(() => {
-    send("LOADING_READY");
-  }, [send]);
+  const onLoadingComplete = useCallback(
+    (hasMission: boolean) => {
+      contentStateRef.current.isLoading = false;
+      contentStateRef.current.hasMission = hasMission;
 
-  const onMissionContentReady = useCallback(() => {
-    send("MISSION_CONTENT_READY");
-  }, [send]);
+      if (state.value === "animatingLoading") {
+        if (hasMission) {
+          send("MISSION_LOADED");
+        } else {
+          send("LOADING_COMPLETE_NO_MISSION");
+        }
+      } else {
+        send("LOADING_COMPLETE");
+      }
+    },
+    [send, state.value]
+  );
 
   // Effect: Start header animation
   useEffect(() => {
@@ -109,16 +123,20 @@ export function useAnimationStateMachine() {
     });
   }, [state.value, send, getElements]);
 
-  // Effect: Decide loading vs mission path
+  // Effect: Decide which content to animate
   useEffect(() => {
-    if (state.value !== "waitingForContent") return;
+    if (state.value !== "decidingContent") return;
 
     // Use rAF to ensure React has finished rendering
     const rafId = requestAnimationFrame(() => {
-      if (missionLoadedRef.current) {
+      const { isLoading, hasMission } = contentStateRef.current;
+
+      if (isLoading) {
+        send("SHOW_LOADING");
+      } else if (hasMission) {
         send("SHOW_MISSION");
       } else {
-        send("SHOW_LOADING");
+        send("SHOW_NO_MISSION");
       }
     });
 
@@ -139,64 +157,91 @@ export function useAnimationStateMachine() {
     );
   }, [state.value, getElements]);
 
+  // Effect: Animate no mission state
+  useEffect(() => {
+    if (state.value !== "animatingNoMission") return;
+
+    const { loadingState, noMissionState } = getElements();
+
+    // If coming from loading state, fade it out first
+    if (loadingState && gsap.getProperty(loadingState, "opacity") === 1) {
+      gsap.to(loadingState, {
+        opacity: 0,
+        y: -20,
+        duration: 0.3,
+        ease: "power2.in",
+        onComplete: () => {
+          gsap.set(loadingState, { display: "none" });
+          animateNoMissionContent();
+        },
+      });
+    } else {
+      animateNoMissionContent();
+    }
+
+    function animateNoMissionContent() {
+      if (!noMissionState) {
+        send("ANIMATION_COMPLETE");
+        return;
+      }
+
+      contentTimelineRef.current = gsap.timeline({
+        onComplete: () => send("ANIMATION_COMPLETE"),
+      });
+
+      contentTimelineRef.current.fromTo(
+        noMissionState,
+        { y: 30, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.6, ease: "power2.out" }
+      );
+    }
+  }, [state.value, send, getElements]);
+
   // Effect: Animate mission content
   useEffect(() => {
     if (state.value !== "animatingMission") return;
 
-    const { subtitle, missionCard } = getElements();
-    if (!subtitle || !missionCard) return;
-
-    contentTimelineRef.current = gsap.timeline({
-      onComplete: () => send("ANIMATION_COMPLETE"),
-    });
-
-    contentTimelineRef.current.fromTo(
-      subtitle,
-      { y: 20, opacity: 0 },
-      { y: 0, opacity: 1, duration: 0.6, ease: "power2.out" }
-    );
-
-    contentTimelineRef.current.fromTo(
-      missionCard,
-      { y: 60, opacity: 0 },
-      { y: 0, opacity: 1, duration: 0.8, ease: "power3.out" },
-      "-=0.4"
-    );
-  }, [state.value, send, getElements]);
-
-  // Effect: Transition from loading to mission
-  useEffect(() => {
-    if (state.value !== "transitioningToMission") return;
-
     const { loadingState, subtitle, missionCard } = getElements();
-    if (!loadingState || !subtitle || !missionCard) return;
 
-    gsap.to(loadingState, {
-      opacity: 0,
-      y: -20,
-      duration: 0.3,
-      ease: "power2.in",
-      onComplete: () => {
-        gsap.set(loadingState, { display: "none" });
+    // If coming from loading state, fade it out first
+    if (loadingState && gsap.getProperty(loadingState, "opacity") === 1) {
+      gsap.to(loadingState, {
+        opacity: 0,
+        y: -20,
+        duration: 0.3,
+        ease: "power2.in",
+        onComplete: () => {
+          gsap.set(loadingState, { display: "none" });
+          animateMissionContent();
+        },
+      });
+    } else {
+      animateMissionContent();
+    }
 
-        const tl = gsap.timeline({
-          onComplete: () => send("TRANSITION_COMPLETE"),
-        });
+    function animateMissionContent() {
+      if (!subtitle || !missionCard) {
+        send("ANIMATION_COMPLETE");
+        return;
+      }
 
-        tl.fromTo(
-          subtitle,
-          { y: 20, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.6, ease: "power2.out" }
-        );
+      contentTimelineRef.current = gsap.timeline({
+        onComplete: () => send("ANIMATION_COMPLETE"),
+      });
 
-        tl.fromTo(
-          missionCard,
-          { y: 60, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.8, ease: "power3.out" },
-          "-=0.4"
-        );
-      },
-    });
+      contentTimelineRef.current.fromTo(
+        subtitle,
+        { y: 20, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.6, ease: "power2.out" }
+      );
+
+      contentTimelineRef.current.fromTo(
+        missionCard,
+        { y: 60, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.8, ease: "power3.out" },
+        "-=0.4"
+      );
+    }
   }, [state.value, send, getElements]);
 
   // Cleanup on unmount
@@ -212,18 +257,9 @@ export function useAnimationStateMachine() {
     state: state.value,
     send,
     onMissionLoaded,
-    onLoadingElementReady,
-    onMissionContentReady,
-    // Rendering decisions
-    isHeaderComplete: !["idle", "animatingHeader"].includes(state.value),
-    isAwaitingLoading: state.value === "awaitingLoadingElement",
+    onLoadingComplete,
+    // Rendering decisions - content always renders, these are for tracking
     isAnimatingLoading: state.value === "animatingLoading",
-    showMission: [
-      "awaitingMissionElements",
-      "animatingMission",
-      "transitioningToMission",
-      "complete",
-    ].includes(state.value),
   };
 }
 
