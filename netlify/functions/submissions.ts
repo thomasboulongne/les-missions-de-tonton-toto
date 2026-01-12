@@ -35,52 +35,127 @@ interface PushSubscription {
   auth: string;
 }
 
+// Helper to identify push service from endpoint
+function getPushServiceType(endpoint: string): string {
+  if (endpoint.includes("web.push.apple.com")) return "Apple (iOS/Safari)";
+  if (endpoint.includes("fcm.googleapis.com"))
+    return "Google FCM (Android/Chrome)";
+  if (endpoint.includes("mozilla.com")) return "Mozilla (Firefox)";
+  if (endpoint.includes("windows.com")) return "Microsoft (Edge)";
+  return "Unknown";
+}
+
 async function sendPushNotifications(
   sql: ReturnType<typeof neon<false, false>>,
   title: string,
   body: string
 ) {
+  console.log("🔔 sendPushNotifications called", { title, body });
+
   // Skip if VAPID not configured
   if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
-    console.log("VAPID keys not configured, skipping push notifications");
+    console.log("⚠️ VAPID keys not configured, skipping push notifications");
     return;
   }
 
+  console.log("✅ VAPID keys are configured");
+
   try {
+    console.log("📋 Fetching push subscriptions from database...");
     const subscriptions = (await sql`
       SELECT endpoint, p256dh, auth FROM push_subscriptions
     `) as PushSubscription[];
 
-    const payload = JSON.stringify({ title, body });
+    console.log(`📊 Found ${subscriptions.length} subscription(s)`);
 
-    const sendPromises = subscriptions.map(async (sub: PushSubscription) => {
-      try {
-        await webpush.sendNotification(
-          {
-            endpoint: sub.endpoint,
-            keys: {
-              p256dh: sub.p256dh,
-              auth: sub.auth,
-            },
-          },
-          payload
-        );
-      } catch (error: unknown) {
-        // If subscription is expired or invalid, remove it
-        if (error instanceof Error && "statusCode" in error) {
-          const statusCode = (error as { statusCode: number }).statusCode;
-          if (statusCode === 404 || statusCode === 410) {
-            console.log("Removing expired subscription:", sub.endpoint);
-            await sql`DELETE FROM push_subscriptions WHERE endpoint = ${sub.endpoint}`;
-          }
-        }
-        console.error("Error sending push to", sub.endpoint, error);
-      }
+    if (subscriptions.length === 0) {
+      console.log("⚠️ No subscriptions to send to");
+      return;
+    }
+
+    // Log subscription details
+    subscriptions.forEach((sub, index) => {
+      const serviceType = getPushServiceType(sub.endpoint);
+      console.log(`  📱 Subscription ${index + 1}:`, {
+        serviceType,
+        endpointPreview: sub.endpoint.substring(0, 80) + "...",
+        hasP256dh: !!sub.p256dh,
+        hasAuth: !!sub.auth,
+        p256dhLength: sub.p256dh?.length,
+        authLength: sub.auth?.length,
+      });
     });
 
-    await Promise.all(sendPromises);
+    const payload = JSON.stringify({ title, body });
+    console.log("📦 Payload:", payload);
+
+    const results = await Promise.allSettled(
+      subscriptions.map(async (sub: PushSubscription, index: number) => {
+        const serviceType = getPushServiceType(sub.endpoint);
+        console.log(
+          `🚀 [${index + 1}/${
+            subscriptions.length
+          }] Sending to ${serviceType}...`
+        );
+
+        try {
+          const result = await webpush.sendNotification(
+            {
+              endpoint: sub.endpoint,
+              keys: {
+                p256dh: sub.p256dh,
+                auth: sub.auth,
+              },
+            },
+            payload
+          );
+
+          console.log(`✅ [${index + 1}] Success!`, {
+            statusCode: result.statusCode,
+            headers: result.headers,
+          });
+
+          return { success: true, endpoint: sub.endpoint };
+        } catch (error: unknown) {
+          const webPushError = error as {
+            statusCode?: number;
+            body?: string;
+            headers?: Record<string, string>;
+            message?: string;
+          };
+
+          console.error(`❌ [${index + 1}] Failed to send to ${serviceType}:`, {
+            statusCode: webPushError.statusCode,
+            body: webPushError.body,
+            headers: webPushError.headers,
+            message: webPushError.message,
+            endpoint: sub.endpoint.substring(0, 80) + "...",
+          });
+
+          // If subscription is expired or invalid, remove it
+          if (
+            webPushError.statusCode === 404 ||
+            webPushError.statusCode === 410
+          ) {
+            console.log(
+              `🗑️ Removing expired/invalid subscription (${webPushError.statusCode})`
+            );
+            await sql`DELETE FROM push_subscriptions WHERE endpoint = ${sub.endpoint}`;
+          }
+
+          throw error;
+        }
+      })
+    );
+
+    // Summary
+    const succeeded = results.filter((r) => r.status === "fulfilled").length;
+    const failed = results.filter((r) => r.status === "rejected").length;
+    console.log(
+      `📊 Push notification summary: ${succeeded} succeeded, ${failed} failed`
+    );
   } catch (error) {
-    console.error("Error fetching push subscriptions:", error);
+    console.error("❌ Error in sendPushNotifications:", error);
   }
 }
 
@@ -301,13 +376,18 @@ export default async (req: Request, _context: Context) => {
             ? `Bravo pour "${submission.mission_title}" !`
             : `Jette un œil aux conseils pour "${submission.mission_title}"`;
 
-        log("📣 Sending push notification...", { title: notificationTitle });
-        // Send push notification in the background (don't await)
-        sendPushNotifications(sql, notificationTitle, notificationBody).catch(
-          (err) => {
-            log("❌ Push notification failed", { error: String(err) });
-          }
-        );
+        log("📣 Starting push notification process...", {
+          title: notificationTitle,
+          body: notificationBody,
+        });
+
+        // Await the push notifications so logs are captured
+        try {
+          await sendPushNotifications(sql, notificationTitle, notificationBody);
+          log("✅ Push notification process completed");
+        } catch (err) {
+          log("❌ Push notification process failed", { error: String(err) });
+        }
       }
 
       return new Response(JSON.stringify(submission), { headers });

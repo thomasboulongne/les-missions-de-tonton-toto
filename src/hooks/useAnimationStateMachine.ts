@@ -13,6 +13,7 @@ import type {
  *
  * States flow:
  * idle → animatingHeader → decidingContent
+ *   → animatingFeedback → complete (feedback card has priority)
  *   → animatingLoading → (animatingMission | animatingNoMission) → complete
  *   → animatingNoMission → complete
  *   → animatingMission → complete
@@ -37,9 +38,15 @@ const animationMachineDefinition = {
     },
     decidingContent: {
       on: {
+        SHOW_FEEDBACK: "animatingFeedback",
         SHOW_LOADING: "animatingLoading",
         SHOW_NO_MISSION: "animatingNoMission",
         SHOW_MISSION: "animatingMission",
+      },
+    },
+    animatingFeedback: {
+      on: {
+        ANIMATION_COMPLETE: "complete",
       },
     },
     animatingLoading: {
@@ -65,6 +72,7 @@ const animationMachineDefinition = {
 interface ContentState {
   isLoading: boolean;
   hasMission: boolean;
+  hasFeedback: boolean;
 }
 
 export function useAnimationStateMachine() {
@@ -75,6 +83,7 @@ export function useAnimationStateMachine() {
   const contentStateRef = useRef<ContentState>({
     isLoading: true,
     hasMission: false,
+    hasFeedback: false,
   });
 
   const [state, send] = useStateMachine(animationMachineDefinition);
@@ -110,6 +119,10 @@ export function useAnimationStateMachine() {
     [send, state.value]
   );
 
+  const setHasFeedback = useCallback((hasFeedback: boolean) => {
+    contentStateRef.current.hasFeedback = hasFeedback;
+  }, []);
+
   // Effect: Start header animation
   useEffect(() => {
     if (state.value !== "animatingHeader") return;
@@ -129,9 +142,12 @@ export function useAnimationStateMachine() {
 
     // Use rAF to ensure React has finished rendering
     const rafId = requestAnimationFrame(() => {
-      const { isLoading, hasMission } = contentStateRef.current;
+      const { isLoading, hasMission, hasFeedback } = contentStateRef.current;
 
-      if (isLoading) {
+      // Feedback has highest priority - show it exclusively
+      if (hasFeedback) {
+        send("SHOW_FEEDBACK");
+      } else if (isLoading) {
         send("SHOW_LOADING");
       } else if (hasMission) {
         send("SHOW_MISSION");
@@ -156,6 +172,27 @@ export function useAnimationStateMachine() {
       { y: 0, opacity: 1, duration: 0.6, ease: "power2.out" }
     );
   }, [state.value, getElements]);
+
+  // Effect: Animate feedback card
+  useEffect(() => {
+    if (state.value !== "animatingFeedback") return;
+
+    const { feedbackCard } = getElements();
+    if (!feedbackCard) {
+      send("ANIMATION_COMPLETE");
+      return;
+    }
+
+    contentTimelineRef.current = gsap.timeline({
+      onComplete: () => send("ANIMATION_COMPLETE"),
+    });
+
+    contentTimelineRef.current.fromTo(
+      feedbackCard,
+      { y: 40, opacity: 0, scale: 0.95 },
+      { y: 0, opacity: 1, scale: 1, duration: 0.7, ease: "back.out(1.2)" }
+    );
+  }, [state.value, send, getElements]);
 
   // Effect: Animate no mission state
   useEffect(() => {
@@ -258,6 +295,7 @@ export function useAnimationStateMachine() {
     send,
     onMissionLoaded,
     onLoadingComplete,
+    setHasFeedback,
     // Rendering decisions - content always renders, these are for tracking
     isAnimatingLoading: state.value === "animatingLoading",
   };

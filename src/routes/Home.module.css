@@ -45,6 +45,10 @@
   opacity: 0;
 }
 
+.feedbackWrapper {
+  opacity: 0;
+}
+
 .emptyState {
   display: flex;
   flex-direction: column;

@@ -28,12 +28,18 @@ export function Home() {
   const subtitleRef = useRef<HTMLSpanElement>(null);
   const loadingRef = useRef<HTMLDivElement>(null);
   const noMissionRef = useRef<HTMLDivElement>(null);
+  const feedbackRef = useRef<HTMLDivElement>(null);
   const register = useAnimationStore((state) => state.register);
   const elements = useAnimationStore((state) => state.elements);
 
   // Use the FSM for animation orchestration
-  const { send, onMissionLoaded, onLoadingComplete, isAnimatingLoading } =
-    useAnimationStateMachine();
+  const {
+    send,
+    onMissionLoaded,
+    onLoadingComplete,
+    setHasFeedback,
+    isAnimatingLoading,
+  } = useAnimationStateMachine();
 
   // Start header animation when header elements are ready
   useEffect(() => {
@@ -63,6 +69,13 @@ export function Home() {
     }
   }, [register, mission]);
 
+  // Register feedback card when it renders
+  useEffect(() => {
+    if (feedbackRef.current) {
+      register("feedbackCard", feedbackRef.current);
+    }
+  }, [register, unreadReviews]);
+
   // Check for unread reviews
   const checkUnreadReviews = useCallback(async () => {
     try {
@@ -71,10 +84,12 @@ export function Home() {
       const since = lastSeen || "1970-01-01T00:00:00.000Z";
       const reviews = await getUnreadReviews(since);
       setUnreadReviews(reviews);
+      // Notify the animation FSM about feedback state
+      setHasFeedback(reviews.length > 0);
     } catch (err) {
       console.error("Error checking unread reviews:", err);
     }
-  }, []);
+  }, [setHasFeedback]);
 
   const fetchMission = useCallback(async () => {
     try {
@@ -105,9 +120,22 @@ export function Home() {
     checkUnreadReviews();
   }, [fetchMission, checkUnreadReviews]);
 
+  // Show the most recent unread review
+  const latestUnreadReview = unreadReviews.length > 0 ? unreadReviews[0] : null;
+  const hasApprovedReview = latestUnreadReview?.status === "approved";
+
   const handleDismissFeedback = () => {
+    const wasApproved = latestUnreadReview?.status === "approved";
+    const wasCurrentMission = latestUnreadReview?.mission_id === mission?.id;
+
     markReviewsAsSeen();
     setUnreadReviews([]);
+    setHasFeedback(false);
+
+    // If the approved review was for the current mission, clear it to show empty state
+    if (wasApproved && wasCurrentMission) {
+      setMission(null);
+    }
   };
 
   // Error state (no animation)
@@ -126,13 +154,11 @@ export function Home() {
     );
   }
 
-  // Show the most recent unread review
-  const latestUnreadReview = unreadReviews.length > 0 ? unreadReviews[0] : null;
-
   // Conditional rendering: only one content type at a time
+  // When showing an approved review, it should be the only content on the page
   const showLoading = loading || isAnimatingLoading;
-  const showNoMission = !loading && !mission;
-  const showMission = !loading && Boolean(mission);
+  const showNoMission = !loading && !mission && !hasApprovedReview;
+  const showMission = !loading && Boolean(mission) && !hasApprovedReview;
 
   return (
     <div className={styles.page}>
@@ -140,10 +166,12 @@ export function Home() {
       <Container size="3" className={styles.container}>
         {/* Feedback card for unread reviews */}
         {latestUnreadReview && !showLoading && (
-          <FeedbackCard
-            submission={latestUnreadReview}
-            onDismiss={handleDismissFeedback}
-          />
+          <div ref={feedbackRef} className={styles.feedbackWrapper}>
+            <FeedbackCard
+              submission={latestUnreadReview}
+              onDismiss={handleDismissFeedback}
+            />
+          </div>
         )}
 
         {/* Loading state */}
