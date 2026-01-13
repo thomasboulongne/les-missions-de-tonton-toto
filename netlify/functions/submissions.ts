@@ -276,7 +276,6 @@ export default async (req: Request, _context: Context) => {
         mission_id,
         what_happened,
         what_was_hard,
-        link_url,
         media_url,
         media_url_2,
       } = body;
@@ -293,10 +292,8 @@ export default async (req: Request, _context: Context) => {
 
       log("💾 Inserting submission...");
       const result = await sql`
-        INSERT INTO submissions (mission_id, what_happened, what_was_hard, link_url, media_url, media_url_2, status)
-        VALUES (${mission_id}, ${what_happened}, ${what_was_hard || null}, ${
-        link_url || null
-      }, ${media_url || null}, ${media_url_2 || null}, 'pending')
+        INSERT INTO submissions (mission_id, what_happened, what_was_hard, media_url, media_url_2, status)
+        VALUES (${mission_id}, ${what_happened}, ${what_was_hard || null}, ${media_url || null}, ${media_url_2 || null}, 'pending')
         RETURNING *
       `;
       log("✅ Submission created", { id: result[0]?.id });

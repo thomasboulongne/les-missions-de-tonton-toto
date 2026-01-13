@@ -46,23 +46,19 @@ export default async (req: Request) => {
       }
 
       if (current === "true") {
-        // Get current mission (most recent without a submission)
+        // Get current mission (first mission without an approved submission)
         const missions = await sql`
           SELECT m.* FROM missions m
-          LEFT JOIN submissions s ON m.id = s.mission_id
-          WHERE s.id IS NULL
-          ORDER BY m.created_at DESC
+          WHERE NOT EXISTS (
+            SELECT 1 FROM submissions s
+            WHERE s.mission_id = m.id AND s.status = 'approved'
+          )
+          ORDER BY m.created_at ASC
           LIMIT 1
         `;
         if (missions.length === 0) {
-          // If all missions have submissions, return the most recent one
-          const allMissions = await sql`
-            SELECT * FROM missions ORDER BY created_at DESC LIMIT 1
-          `;
-          if (allMissions.length === 0) {
-            return new Response(JSON.stringify(null), { headers });
-          }
-          return new Response(JSON.stringify(allMissions[0]), { headers });
+          // All missions have approved submissions - no current mission
+          return new Response(JSON.stringify(null), { headers });
         }
         return new Response(JSON.stringify(missions[0]), { headers });
       }

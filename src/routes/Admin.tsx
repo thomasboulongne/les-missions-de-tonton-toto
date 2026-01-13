@@ -1,12 +1,33 @@
-import { useState, useEffect } from 'react';
-import { Box, Container, Heading, Text, Tabs, Card, Button, Badge, Flex, TextArea } from '@radix-ui/themes';
-import { Link } from 'react-router-dom';
-import { MissionForm } from '../components/MissionForm';
-import { DifficultyBadge } from '../components/DifficultyBadge';
-import { OptimizedImage } from '../components/OptimizedImage';
-import { getSubmissions, reviewSubmission, getAllMissions, deleteMission } from '../lib/api';
-import type { MissionWithSubmissions, Mission, SubmissionStatus, SubmissionWithMission } from '../types';
-import styles from './Admin.module.css';
+import { useState, useEffect } from "react";
+import {
+  Box,
+  Container,
+  Heading,
+  Text,
+  Tabs,
+  Card,
+  Button,
+  Badge,
+  Flex,
+  TextArea,
+} from "@radix-ui/themes";
+import { Link } from "react-router-dom";
+import { MissionForm } from "../components/MissionForm";
+import { DifficultyBadge } from "../components/DifficultyBadge";
+import { OptimizedImage } from "../components/OptimizedImage";
+import {
+  getSubmissions,
+  reviewSubmission,
+  getAllMissions,
+  deleteMission,
+} from "../lib/api";
+import type {
+  MissionWithSubmissions,
+  Mission,
+  SubmissionStatus,
+  SubmissionWithMission,
+} from "../types";
+import styles from "./Admin.module.css";
 
 export function Admin() {
   const [submissions, setSubmissions] = useState<SubmissionWithMission[]>([]);
@@ -25,7 +46,7 @@ export function Admin() {
       setSubmissions(submissionsData as SubmissionWithMission[]);
       setMissions(missionsData);
     } catch (err) {
-      console.error('Error fetching data:', err);
+      console.error("Error fetching data:", err);
     } finally {
       setLoading(false);
     }
@@ -43,11 +64,14 @@ export function Admin() {
       });
       await fetchData();
     } catch (err) {
-      console.error('Error reviewing submission:', err);
+      console.error("Error reviewing submission:", err);
     }
   };
 
-  const handleSaveNotes = async (id: number, currentStatus: SubmissionStatus) => {
+  const handleSaveNotes = async (
+    id: number,
+    currentStatus: SubmissionStatus
+  ) => {
     try {
       await reviewSubmission(id, {
         status: currentStatus,
@@ -55,17 +79,17 @@ export function Admin() {
       });
       await fetchData();
     } catch (err) {
-      console.error('Error saving notes:', err);
+      console.error("Error saving notes:", err);
     }
   };
 
   const handleDeleteMission = async (id: number) => {
-    if (!confirm('Supprimer cette mission et toutes ses soumissions ?')) return;
+    if (!confirm("Supprimer cette mission et toutes ses soumissions ?")) return;
     try {
       await deleteMission(id);
       await fetchData();
     } catch (err) {
-      console.error('Error deleting mission:', err);
+      console.error("Error deleting mission:", err);
     }
   };
 
@@ -82,13 +106,13 @@ export function Admin() {
     setEditingMission(null);
   };
 
-  const pendingCount = submissions.filter((s) => s.status === 'pending').length;
+  const pendingCount = submissions.filter((s) => s.status === "pending").length;
 
   const getStatusBadge = (status: SubmissionStatus) => {
     switch (status) {
-      case 'approved':
+      case "approved":
         return <Badge color="green">✓ Validé</Badge>;
-      case 'needs_work':
+      case "needs_work":
         return <Badge color="orange">💪 À retravailler</Badge>;
       default:
         return <Badge color="gray">⏳ En attente</Badge>;
@@ -116,7 +140,9 @@ export function Admin() {
           <Tabs.Trigger value="submissions" className={styles.tabTrigger}>
             📝 Soumissions
             {pendingCount > 0 && (
-              <Badge color="red" size="1" ml="2">{pendingCount}</Badge>
+              <Badge color="red" size="1" ml="2">
+                {pendingCount}
+              </Badge>
             )}
           </Tabs.Trigger>
         </Tabs.List>
@@ -146,11 +172,14 @@ export function Admin() {
                     <Flex justify="between" align="start" gap="3">
                       <Box style={{ flex: 1 }}>
                         <Flex align="center" gap="2" mb="2">
-                          <Text size="1" color="gray">#{mission.id}</Text>
+                          <Text size="1" color="gray">
+                            #{mission.id}
+                          </Text>
                           <DifficultyBadge difficulty={mission.difficulty} />
                           {mission.submissions.length > 0 && (
                             <Badge color="green" size="1">
-                              {mission.submissions.length} soumission{mission.submissions.length > 1 ? 's' : ''}
+                              {mission.submissions.length} soumission
+                              {mission.submissions.length > 1 ? "s" : ""}
                             </Badge>
                           )}
                         </Flex>
@@ -160,8 +189,16 @@ export function Admin() {
                         <Text size="2" color="gray">
                           {mission.objective}
                         </Text>
-                        <Text size="1" color="gray" mt="2" style={{ display: 'block' }}>
-                          Créée le {new Date(mission.created_at).toLocaleDateString('fr-FR')}
+                        <Text
+                          size="1"
+                          color="gray"
+                          mt="2"
+                          style={{ display: "block" }}
+                        >
+                          Créée le{" "}
+                          {new Date(mission.created_at).toLocaleDateString(
+                            "fr-FR"
+                          )}
                         </Text>
                       </Box>
                       <Flex gap="2">
@@ -202,11 +239,11 @@ export function Admin() {
                   <Card
                     key={submission.id}
                     className={`${styles.submissionCard} ${
-                      submission.status === 'approved'
+                      submission.status === "approved"
                         ? styles.approved
-                        : submission.status === 'needs_work'
-                          ? styles.needsWork
-                          : styles.pending
+                        : submission.status === "needs_work"
+                        ? styles.needsWork
+                        : styles.pending
                     }`}
                   >
                     <Flex justify="between" align="start" mb="3">
@@ -215,13 +252,17 @@ export function Admin() {
                           {submission.mission_title}
                         </Heading>
                         <Text size="2" color="gray">
-                          Soumis le {new Date(submission.submitted_at).toLocaleDateString('fr-FR', {
-                            day: 'numeric',
-                            month: 'long',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
+                          Soumis le{" "}
+                          {new Date(submission.submitted_at).toLocaleDateString(
+                            "fr-FR",
+                            {
+                              day: "numeric",
+                              month: "long",
+                              year: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            }
+                          )}
                         </Text>
                       </Box>
                       {getStatusBadge(submission.status)}
@@ -240,105 +281,195 @@ export function Admin() {
                           <Text as="p" size="2" mb="2" mt="3">
                             <strong>Difficultés :</strong>
                           </Text>
-                          <Text as="p" size="2" className={styles.submissionText}>
+                          <Text
+                            as="p"
+                            size="2"
+                            className={styles.submissionText}
+                          >
                             {submission.what_was_hard}
                           </Text>
                         </>
                       )}
 
-                      {submission.link_url && (
-                        <Text as="p" size="2" mt="3">
-                          <strong>Lien :</strong>{' '}
-                          <a href={submission.link_url} target="_blank" rel="noopener noreferrer">
-                            {submission.link_url}
-                          </a>
-                        </Text>
-                      )}
+                      {(submission.media_url || submission.media_url_2) && (
+                        <Box mt="3" className={styles.mediaSection}>
+                          {submission.media_url && (
+                            <Box mb="3">
+                              <Text as="p" size="2" mb="2">
+                                <strong>🤖 Vidéo du robot :</strong>
+                              </Text>
+                              {submission.media_url.match(
+                                /\.(mp4|webm|mov|avi)$/i
+                              ) ? (
+                                <video
+                                  src={submission.media_url}
+                                  controls
+                                  className={styles.videoPreview}
+                                />
+                              ) : (
+                                <a
+                                  href={submission.media_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  <OptimizedImage
+                                    src={submission.media_url}
+                                    alt="Vidéo du robot"
+                                    className={styles.mediaPreview}
+                                    sizes="300px"
+                                    widths={[300, 600]}
+                                    quality={80}
+                                    onError={(e) => {
+                                      (
+                                        e.target as HTMLImageElement
+                                      ).style.display = "none";
+                                    }}
+                                  />
+                                </a>
+                              )}
+                              <Text size="1">
+                                <a
+                                  href={submission.media_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  🔗 Ouvrir en grand
+                                </a>
+                              </Text>
+                            </Box>
+                          )}
 
-                      {submission.media_url && (
-                        <Box mt="3">
-                          <Text as="p" size="2" mb="2">
-                            <strong>Média :</strong>
-                          </Text>
-                          <a href={submission.media_url} target="_blank" rel="noopener noreferrer">
-                            <OptimizedImage
-                              src={submission.media_url}
-                              alt="Média soumis"
-                              className={styles.mediaPreview}
-                              sizes="300px"
-                              widths={[300, 600]}
-                              quality={80}
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).style.display = 'none';
-                              }}
-                            />
-                          </a>
-                          <a href={submission.media_url} target="_blank" rel="noopener noreferrer">
-                            🔗 Voir le média
-                          </a>
+                          {submission.media_url_2 && (
+                            <Box>
+                              <Text as="p" size="2" mb="2">
+                                <strong>💻 Capture du programme :</strong>
+                              </Text>
+                              {submission.media_url_2.match(
+                                /\.(mp4|webm|mov|avi)$/i
+                              ) ? (
+                                <video
+                                  src={submission.media_url_2}
+                                  controls
+                                  className={styles.videoPreview}
+                                />
+                              ) : (
+                                <a
+                                  href={submission.media_url_2}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  <OptimizedImage
+                                    src={submission.media_url_2}
+                                    alt="Capture du programme"
+                                    className={styles.mediaPreview}
+                                    sizes="300px"
+                                    widths={[300, 600]}
+                                    quality={80}
+                                    onError={(e) => {
+                                      (
+                                        e.target as HTMLImageElement
+                                      ).style.display = "none";
+                                    }}
+                                  />
+                                </a>
+                              )}
+                              <Text size="1">
+                                <a
+                                  href={submission.media_url_2}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  🔗 Ouvrir en grand
+                                </a>
+                              </Text>
+                            </Box>
+                          )}
                         </Box>
                       )}
                     </Box>
 
                     <Box className={styles.reviewSection}>
-                      <Text as="label" size="2" weight="bold" className={styles.label}>
+                      <Text
+                        as="label"
+                        size="2"
+                        weight="bold"
+                        className={styles.label}
+                      >
                         Message pour ton neveu :
                       </Text>
                       <TextArea
                         placeholder="Écris un message encourageant..."
-                        value={reviewNotes[submission.id] ?? submission.review_notes ?? ''}
-                        onChange={(e) => setReviewNotes({
-                          ...reviewNotes,
-                          [submission.id]: e.target.value,
-                        })}
+                        value={
+                          reviewNotes[submission.id] ??
+                          submission.review_notes ??
+                          ""
+                        }
+                        onChange={(e) =>
+                          setReviewNotes({
+                            ...reviewNotes,
+                            [submission.id]: e.target.value,
+                          })
+                        }
                         rows={2}
                         className={styles.reviewTextarea}
                       />
                       <Flex gap="2" mt="3" wrap="wrap">
-                        {submission.status === 'pending' && (
+                        {submission.status === "pending" && (
                           <>
                             <Button
                               color="green"
-                              onClick={() => handleReview(submission.id, 'approved')}
+                              onClick={() =>
+                                handleReview(submission.id, "approved")
+                              }
                             >
                               🎉 Approuver
                             </Button>
                             <Button
                               color="orange"
-                              onClick={() => handleReview(submission.id, 'needs_work')}
+                              onClick={() =>
+                                handleReview(submission.id, "needs_work")
+                              }
                             >
                               💪 À retravailler
                             </Button>
                           </>
                         )}
-                        {submission.status === 'approved' && (
+                        {submission.status === "approved" && (
                           <>
                             <Button
                               variant="soft"
                               color="orange"
-                              onClick={() => handleReview(submission.id, 'needs_work')}
+                              onClick={() =>
+                                handleReview(submission.id, "needs_work")
+                              }
                             >
                               💪 Changer en "À retravailler"
                             </Button>
                             <Button
                               variant="soft"
-                              onClick={() => handleReview(submission.id, 'pending')}
+                              onClick={() =>
+                                handleReview(submission.id, "pending")
+                              }
                             >
                               ↩ Remettre en attente
                             </Button>
                           </>
                         )}
-                        {submission.status === 'needs_work' && (
+                        {submission.status === "needs_work" && (
                           <>
                             <Button
                               color="green"
-                              onClick={() => handleReview(submission.id, 'approved')}
+                              onClick={() =>
+                                handleReview(submission.id, "approved")
+                              }
                             >
                               🎉 Approuver
                             </Button>
                             <Button
                               variant="soft"
-                              onClick={() => handleReview(submission.id, 'pending')}
+                              onClick={() =>
+                                handleReview(submission.id, "pending")
+                              }
                             >
                               ↩ Remettre en attente
                             </Button>
@@ -346,7 +477,9 @@ export function Admin() {
                         )}
                         <Button
                           variant="soft"
-                          onClick={() => handleSaveNotes(submission.id, submission.status)}
+                          onClick={() =>
+                            handleSaveNotes(submission.id, submission.status)
+                          }
                         >
                           💾 Sauvegarder le message
                         </Button>

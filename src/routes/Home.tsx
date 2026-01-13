@@ -6,18 +6,33 @@ import { HintsSection } from "../components/HintsSection";
 import { SubmissionDialog } from "../components/SubmissionDialog";
 import { FeedbackCard } from "../components/FeedbackCard";
 import { Header } from "../components/Header";
-import { getCurrentMission, getUnreadReviews } from "../lib/api";
+import {
+  getCurrentMission,
+  getMissionSubmission,
+  getUnreadReviews,
+} from "../lib/api";
 import {
   getLastSeenReviewTime,
   markReviewsAsSeen,
 } from "../lib/pushNotifications";
 import { useAnimationStateMachine } from "../hooks/useAnimationStateMachine";
 import { useAnimationStore } from "../stores/animationStore";
-import type { Mission, SubmissionWithMission } from "../types";
+import type { Mission, Submission, SubmissionWithMission } from "../types";
 import styles from "./Home.module.css";
+
+// View states for the home page
+type ViewState =
+  | "loading"
+  | "missionReady"
+  | "pendingReview"
+  | "needsWork"
+  | "allComplete";
 
 export function Home() {
   const [mission, setMission] = useState<Mission | null>(null);
+  const [currentSubmission, setCurrentSubmission] = useState<Submission | null>(
+    null
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -70,11 +85,12 @@ export function Home() {
   }, [register, mission]);
 
   // Register feedback card when it renders
+  // Dependencies include loading since the element only renders when !showLoading
   useEffect(() => {
     if (feedbackRef.current) {
       register("feedbackCard", feedbackRef.current);
     }
-  }, [register, unreadReviews]);
+  }, [register, unreadReviews, loading, isAnimatingLoading]);
 
   // Check for unread reviews
   const checkUnreadReviews = useCallback(async () => {
@@ -94,12 +110,16 @@ export function Home() {
   const fetchMission = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await getCurrentMission();
-      setMission(data);
+      const missionData = await getCurrentMission();
+      setMission(missionData);
 
-      // Notify FSM when loading completes
-      if (data) {
+      // Fetch the current submission if we have a mission
+      if (missionData) {
+        const submissionData = await getMissionSubmission(missionData.id);
+        setCurrentSubmission(submissionData);
         onMissionLoaded();
+      } else {
+        setCurrentSubmission(null);
       }
     } catch {
       setError("Impossible de charger la mission");
@@ -120,23 +140,30 @@ export function Home() {
     checkUnreadReviews();
   }, [fetchMission, checkUnreadReviews]);
 
-  // Show the most recent unread review
+  // Show the most recent unread review (for needs_work feedback)
   const latestUnreadReview = unreadReviews.length > 0 ? unreadReviews[0] : null;
-  const hasApprovedReview = latestUnreadReview?.status === "approved";
 
   const handleDismissFeedback = () => {
-    const wasApproved = latestUnreadReview?.status === "approved";
-    const wasCurrentMission = latestUnreadReview?.mission_id === mission?.id;
-
     markReviewsAsSeen();
     setUnreadReviews([]);
     setHasFeedback(false);
-
-    // If the approved review was for the current mission, clear it to show empty state
-    if (wasApproved && wasCurrentMission) {
-      setMission(null);
-    }
   };
+
+  // Compute the view state based on mission and submission status
+  const computeViewState = (): ViewState => {
+    if (loading || isAnimatingLoading) return "loading";
+    if (!mission) return "allComplete";
+
+    // Check submission status for the current mission
+    if (currentSubmission) {
+      if (currentSubmission.status === "pending") return "pendingReview";
+      if (currentSubmission.status === "needs_work") return "needsWork";
+    }
+
+    return "missionReady";
+  };
+
+  const viewState = computeViewState();
 
   // Error state (no animation)
   if (error) {
@@ -154,35 +181,19 @@ export function Home() {
     );
   }
 
-  // Conditional rendering: only one content type at a time
-  // When showing an approved review, it should be the only content on the page
-  const showLoading = loading || isAnimatingLoading;
-  const showNoMission = !loading && !mission && !hasApprovedReview;
-  const showMission = !loading && Boolean(mission) && !hasApprovedReview;
-
   return (
     <div className={styles.page}>
       <Header />
       <Container size="3" className={styles.container}>
-        {/* Feedback card for unread reviews */}
-        {latestUnreadReview && !showLoading && (
-          <div ref={feedbackRef} className={styles.feedbackWrapper}>
-            <FeedbackCard
-              submission={latestUnreadReview}
-              onDismiss={handleDismissFeedback}
-            />
-          </div>
-        )}
-
         {/* Loading state */}
-        {showLoading && (
+        {viewState === "loading" && (
           <Box ref={loadingRef} className={styles.loading}>
             <Text size="5">🤖 Chargement de ta mission...</Text>
           </Box>
         )}
 
-        {/* Empty state */}
-        {showNoMission && (
+        {/* All missions completed */}
+        {viewState === "allComplete" && (
           <Box ref={noMissionRef} className={styles.noMission}>
             <Box className={styles.emptyState}>
               <Text size="5">🎉 Bravo !</Text>
@@ -203,8 +214,86 @@ export function Home() {
           </Box>
         )}
 
-        {/* Mission content */}
-        {showMission && mission && (
+        {/* Pending review - waiting for Tonton Toto */}
+        {viewState === "pendingReview" && (
+          <Box ref={noMissionRef} className={styles.noMission}>
+            <Box className={styles.pendingState}>
+              <Text size="6">⏳</Text>
+              <Text size="5" weight="bold">
+                En attente de validation
+              </Text>
+              <Text size="3" color="gray">
+                Tonton Toto examine ta mission...
+              </Text>
+              <Text size="2" color="gray">
+                Tu recevras une notification quand ce sera prêt !
+              </Text>
+              <Link to="/missions">
+                <Button
+                  size="3"
+                  variant="soft"
+                  className={styles.archiveButton}
+                >
+                  📚 Voir les archives
+                </Button>
+              </Link>
+            </Box>
+          </Box>
+        )}
+
+        {/* Needs work - show feedback + mission + resubmit */}
+        {viewState === "needsWork" && mission && (
+          <>
+            {/* Feedback card for needs_work reviews */}
+            {latestUnreadReview && (
+              <div ref={feedbackRef} className={styles.feedbackWrapper}>
+                <FeedbackCard
+                  submission={latestUnreadReview}
+                  onDismiss={handleDismissFeedback}
+                />
+              </div>
+            )}
+
+            <Text ref={subtitleRef} className={styles.subtitle}>
+              Mission à améliorer
+            </Text>
+
+            <MissionCard mission={mission} />
+
+            <HintsSection
+              missionId={mission.id}
+              hint1={mission.hint1}
+              hint2={mission.hint2}
+            />
+
+            <Flex gap="3" className={styles.actions} justify={"center"}>
+              <Button
+                size="4"
+                className={styles.submitButton}
+                onClick={() => setDialogOpen(true)}
+              >
+                🔄 Renvoyer ma mission
+              </Button>
+
+              <Link to="/missions">
+                <Button size="4" variant="soft">
+                  📚 Archives
+                </Button>
+              </Link>
+            </Flex>
+
+            <SubmissionDialog
+              missionId={mission.id}
+              missionTitle={mission.title}
+              open={dialogOpen}
+              onOpenChange={setDialogOpen}
+              onSuccess={fetchMission}
+            />
+          </>
+        )}
+
+        {/* Mission ready - no submission yet */}
+        {viewState === "missionReady" && mission && (
           <>
             <Text ref={subtitleRef} className={styles.subtitle}>
               Mission en cours

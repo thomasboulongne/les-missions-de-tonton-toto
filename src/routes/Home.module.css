@@ -61,6 +61,18 @@
   max-width: 400px;
 }
 
+.pendingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 3rem 2rem;
+  background: var(--amber-2);
+  border-radius: 16px;
+  border: 2px solid var(--amber-6);
+  max-width: 400px;
+}
+
 .archiveButton {
   margin-top: 1rem;
 }

@@ -23,15 +23,13 @@
 
 .approved {
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  box-shadow:
-    0 4px 20px rgba(16, 185, 129, 0.3),
+  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3),
     0 0 0 1px rgba(255, 255, 255, 0.1) inset;
 }
 
 .needsWork {
   background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-  box-shadow:
-    0 4px 20px rgba(245, 158, 11, 0.3),
+  box-shadow: 0 4px 20px rgba(245, 158, 11, 0.3),
     0 0 0 1px rgba(255, 255, 255, 0.1) inset;
 }
 
@@ -49,7 +47,8 @@
 }
 
 @keyframes float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0);
   }
   50% {
@@ -101,6 +100,7 @@
   font-size: 1.05rem;
   line-height: 1.6;
   font-style: italic;
+  text-align: center;
 }
 
 .actions {
@@ -136,24 +136,32 @@
 
 /* Decorative elements */
 .card::before {
-  content: '';
+  content: "";
   position: absolute;
   top: -50%;
   right: -50%;
   width: 100%;
   height: 100%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.1) 0%,
+    transparent 70%
+  );
   pointer-events: none;
 }
 
 .card::after {
-  content: '';
+  content: "";
   position: absolute;
   bottom: -30%;
   left: -30%;
   width: 60%;
   height: 60%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.08) 0%,
+    transparent 70%
+  );
   pointer-events: none;
 }
 
@@ -173,4 +181,3 @@
     transform: scale(1) rotate(0deg);
   }
 }
-

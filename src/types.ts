@@ -22,7 +22,6 @@ export interface Submission {
   mission_id: number;
   what_happened: string;
   what_was_hard: string | null;
-  link_url: string | null;
   media_url: string | null;
   media_url_2: string | null;
   submitted_at: string;
@@ -57,7 +56,6 @@ export interface CreateSubmissionInput {
   mission_id: number;
   what_happened: string;
   what_was_hard?: string;
-  link_url?: string;
   media_url?: string;
   media_url_2?: string;
 }

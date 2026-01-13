@@ -177,28 +177,45 @@ export function useAnimationStateMachine() {
   useEffect(() => {
     if (state.value !== "animatingFeedback") return;
 
-    const { feedbackCard } = getElements();
-    if (!feedbackCard) {
-      send("ANIMATION_COMPLETE");
-      return;
+    // Wait for the element to be registered (it may not exist immediately after state transition)
+    let attempts = 0;
+    const maxAttempts = 10;
+
+    function tryAnimate() {
+      const { feedbackCard } = getElements();
+
+      if (!feedbackCard) {
+        attempts++;
+        if (attempts < maxAttempts) {
+          // Retry after a frame
+          requestAnimationFrame(tryAnimate);
+          return;
+        }
+        // Give up after max attempts
+        send("ANIMATION_COMPLETE");
+        return;
+      }
+
+      contentTimelineRef.current = gsap.timeline({
+        onComplete: () => send("ANIMATION_COMPLETE"),
+      });
+
+      contentTimelineRef.current.fromTo(
+        feedbackCard,
+        { y: 40, opacity: 0, scale: 0.95 },
+        { y: 0, opacity: 1, scale: 1, duration: 0.7, ease: "back.out(1.2)" }
+      );
     }
 
-    contentTimelineRef.current = gsap.timeline({
-      onComplete: () => send("ANIMATION_COMPLETE"),
-    });
-
-    contentTimelineRef.current.fromTo(
-      feedbackCard,
-      { y: 40, opacity: 0, scale: 0.95 },
-      { y: 0, opacity: 1, scale: 1, duration: 0.7, ease: "back.out(1.2)" }
-    );
+    // Start with a rAF to give React time to render
+    requestAnimationFrame(tryAnimate);
   }, [state.value, send, getElements]);
 
   // Effect: Animate no mission state
   useEffect(() => {
     if (state.value !== "animatingNoMission") return;
 
-    const { loadingState, noMissionState } = getElements();
+    const { loadingState } = getElements();
 
     // If coming from loading state, fade it out first
     if (loadingState && gsap.getProperty(loadingState, "opacity") === 1) {
@@ -209,15 +226,27 @@ export function useAnimationStateMachine() {
         ease: "power2.in",
         onComplete: () => {
           gsap.set(loadingState, { display: "none" });
-          animateNoMissionContent();
+          tryAnimateNoMissionContent();
         },
       });
     } else {
-      animateNoMissionContent();
+      tryAnimateNoMissionContent();
     }
 
-    function animateNoMissionContent() {
+    // Retry mechanism to wait for elements to be registered
+    let attempts = 0;
+    const maxAttempts = 10;
+
+    function tryAnimateNoMissionContent() {
+      const { noMissionState } = getElements();
+
       if (!noMissionState) {
+        attempts++;
+        if (attempts < maxAttempts) {
+          requestAnimationFrame(tryAnimateNoMissionContent);
+          return;
+        }
+        // Give up after max attempts
         send("ANIMATION_COMPLETE");
         return;
       }
@@ -238,7 +267,7 @@ export function useAnimationStateMachine() {
   useEffect(() => {
     if (state.value !== "animatingMission") return;
 
-    const { loadingState, subtitle, missionCard } = getElements();
+    const { loadingState } = getElements();
 
     // If coming from loading state, fade it out first
     if (loadingState && gsap.getProperty(loadingState, "opacity") === 1) {
@@ -249,15 +278,27 @@ export function useAnimationStateMachine() {
         ease: "power2.in",
         onComplete: () => {
           gsap.set(loadingState, { display: "none" });
-          animateMissionContent();
+          tryAnimateMissionContent();
         },
       });
     } else {
-      animateMissionContent();
+      tryAnimateMissionContent();
     }
 
-    function animateMissionContent() {
+    // Retry mechanism to wait for elements to be registered
+    let attempts = 0;
+    const maxAttempts = 10;
+
+    function tryAnimateMissionContent() {
+      const { subtitle, missionCard } = getElements();
+
       if (!subtitle || !missionCard) {
+        attempts++;
+        if (attempts < maxAttempts) {
+          requestAnimationFrame(tryAnimateMissionContent);
+          return;
+        }
+        // Give up after max attempts
         send("ANIMATION_COMPLETE");
         return;
       }

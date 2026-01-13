@@ -23,7 +23,6 @@ CREATE TABLE IF NOT EXISTS submissions (
   mission_id INTEGER NOT NULL REFERENCES missions(id) ON DELETE CASCADE,
   what_happened TEXT NOT NULL,
   what_was_hard TEXT,
-  link_url TEXT,
   media_url TEXT,
   media_url_2 TEXT,
   submitted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

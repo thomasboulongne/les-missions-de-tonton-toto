@@ -151,14 +151,6 @@ export function Archives() {
                             </Text>
                           )}
 
-                          {submission.link_url && (
-                            <Text as="p" size="2">
-                              <a href={submission.link_url} target="_blank" rel="noopener noreferrer">
-                                🔗 Voir le lien
-                              </a>
-                            </Text>
-                          )}
-
                           {submission.media_url && (
                             <Box className={styles.mediaPreview}>
                               <a href={submission.media_url} target="_blank" rel="noopener noreferrer">

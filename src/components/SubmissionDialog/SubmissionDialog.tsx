@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Dialog, Button, Flex, Text, TextArea, TextField, Box } from '@radix-ui/themes';
+import { Dialog, Button, Flex, Text, TextArea, Box } from '@radix-ui/themes';
 import { createSubmission } from '../../lib/api';
 import { MediaUpload } from '../MediaUpload';
 import {
@@ -28,7 +28,6 @@ export function SubmissionDialog({
 }: SubmissionDialogProps) {
   const [whatHappened, setWhatHappened] = useState('');
   const [whatWasHard, setWhatWasHard] = useState('');
-  const [linkUrl, setLinkUrl] = useState('');
   const [mediaUrl, setMediaUrl] = useState('');
   const [mediaUrl2, setMediaUrl2] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -66,7 +65,6 @@ export function SubmissionDialog({
     setPushHandled(false);
     setWhatHappened('');
     setWhatWasHard('');
-    setLinkUrl('');
     setMediaUrl('');
     setMediaUrl2('');
     onSuccess?.();
@@ -99,7 +97,6 @@ export function SubmissionDialog({
         mission_id: missionId,
         what_happened: whatHappened,
         what_was_hard: whatWasHard || undefined,
-        link_url: linkUrl || undefined,
         media_url: mediaUrl || undefined,
         media_url_2: mediaUrl2 || undefined,
       });
@@ -114,7 +111,6 @@ export function SubmissionDialog({
   const resetForm = () => {
     setWhatHappened('');
     setWhatWasHard('');
-    setLinkUrl('');
     setMediaUrl('');
     setMediaUrl2('');
     setError(null);
@@ -184,18 +180,6 @@ export function SubmissionDialog({
                   onChange={(e) => setWhatWasHard(e.target.value)}
                   rows={2}
                   className={styles.textarea}
-                />
-              </Box>
-
-              <Box>
-                <Text as="label" size="2" weight="bold" className={styles.label}>
-                  Lien (optionnel)
-                </Text>
-                <TextField.Root
-                  placeholder="https://..."
-                  value={linkUrl}
-                  onChange={(e) => setLinkUrl(e.target.value)}
-                  type="url"
                 />
               </Box>
 

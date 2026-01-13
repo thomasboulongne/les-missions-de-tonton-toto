@@ -88,12 +88,27 @@
   white-space: pre-wrap;
 }
 
+.mediaSection {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
 .mediaPreview {
   max-width: 300px;
   max-height: 200px;
   object-fit: contain;
   border-radius: 8px;
   margin-bottom: 0.5rem;
+  display: block;
+}
+
+.videoPreview {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  background: var(--gray-3);
 }
 
 .reviewSection {
